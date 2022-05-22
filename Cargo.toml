@@ -7,4 +7,8 @@ edition = "2021"
 
 [dependencies]
 diesel = { version="1.4.8", features=["postgres"]}
-thiserror = "*"
+thiserror = "1.0.31"
+rand = "0.8.5"
+sha2 = "0.10.2"
+hex = "0.4.3"
+actix-web = "4.0.1"
