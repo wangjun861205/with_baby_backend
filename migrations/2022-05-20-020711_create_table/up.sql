@@ -15,10 +15,10 @@ create table users (
 	id serial not null,
 	name varchar not null,
 	phone varchar not null,
-	pasword varchar not null,
+	password varchar not null,
 	salt varchar not null,
-	create_on timestamp default current_timestamp,
-	update_on timestamp default current_timestamp,
+	create_on timestamp default current_timestamp not null,
+	update_on timestamp default current_timestamp not null,
 	primary key (id)
 );
 
@@ -37,8 +37,8 @@ create table playings (
 	latitude decimal(18, 16) not null,
 	longitude decimal(19, 16) not null,
 	discoverer int not null references users (id),
-	create_on timestamp default current_timestamp,
-	update_on timestamp default current_timestamp,
+	create_on timestamp default current_timestamp not null,
+	update_on timestamp default current_timestamp not null,
 	primary key (id)
 );
 
@@ -57,8 +57,8 @@ create table eatings (
 	latitude decimal(18, 16) not null,
 	longitude decimal(19, 16) not null,
 	discoverer int not null references users (id),
-	create_on timestamp default current_timestamp,
-	update_on timestamp default current_timestamp,
+	create_on timestamp default current_timestamp not null,
+	update_on timestamp default current_timestamp not null,
 	primary key (id)
 );
 

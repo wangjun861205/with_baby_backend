@@ -5,8 +5,8 @@ table! {
         latitude -> Numeric,
         longitude -> Numeric,
         discoverer -> Int4,
-        create_on -> Nullable<Timestamp>,
-        update_on -> Nullable<Timestamp>,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
     }
 }
 
@@ -17,8 +17,8 @@ table! {
         latitude -> Numeric,
         longitude -> Numeric,
         discoverer -> Int4,
-        create_on -> Nullable<Timestamp>,
-        update_on -> Nullable<Timestamp>,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
     }
 }
 
@@ -27,10 +27,10 @@ table! {
         id -> Int4,
         name -> Varchar,
         phone -> Varchar,
-        pasword -> Varchar,
+        password -> Varchar,
         salt -> Varchar,
-        create_on -> Nullable<Timestamp>,
-        update_on -> Nullable<Timestamp>,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
     }
 }
 
