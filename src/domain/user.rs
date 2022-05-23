@@ -21,13 +21,13 @@ pub struct Query {
 }
 
 pub struct User {
-    id: i32,
-    name: String,
-    phone: String,
-    password: String,
-    salt: String,
-    create_on: chrono::NaiveDateTime,
-    update_on: chrono::NaiveDateTime,
+    pub id: i32,
+    pub name: String,
+    pub phone: String,
+    pub password: String,
+    pub salt: String,
+    pub create_on: chrono::NaiveDateTime,
+    pub update_on: chrono::NaiveDateTime,
 }
 
 pub trait UserPersister {

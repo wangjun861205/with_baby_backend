@@ -1,25 +1,20 @@
 mod domain;
+mod handler;
 mod persister;
 mod schema;
-mod handler;
 mod token;
-
-
 
 #[macro_use]
 extern crate diesel;
-#[macro_use]
 extern crate serde;
-use actix_web::{web, App, HttpServer};
+use actix_web::{App, HttpServer};
+use token::jwt::JWT;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
-        App::new()
-            .route("login", web::get().user::login)
-            .route("signup", web::domain::user::signup)
-    })
-    .bind(("localhost", 8000))?
-    .run()
-    .await
+    let jwt = JWT::new("123456", chrono::Duration::days(30));
+    HttpServer::new(move || App::new().wrap(jwt.clone()))
+        .bind(("localhost", 8000))?
+        .run()
+        .await
 }

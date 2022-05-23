@@ -16,3 +16,5 @@ r2d2 = "0.8.9"
 anyhow = "1.0.57"
 chrono = "0.4.19"
 serde = { version = "1.0.137", features = ["derive"] }
+jsonwebtoken = "8.1.0"
+futures-util = "0.3.21"

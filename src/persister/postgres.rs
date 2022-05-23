@@ -81,18 +81,18 @@ impl UserPersister for PostgresPersister {
         query: crate::domain::user::Query,
     ) -> Result<(Vec<crate::domain::user::User>, i64), Error> {
         let mut q = users::table.into_boxed();
-        if let Some(name) = query.name {
+        if let Some(name) = &query.name {
             q = q.filter(users::name.eq(name));
         }
-        if let Some(phone) = query.phone {
+        if let Some(phone) = &query.phone {
             q = q.filter(users::phone.eq(phone));
         }
         let total = q.count().get_result(&self.conn)?;
         let mut q = users::table.into_boxed();
-        if let Some(name) = query.name {
+        if let Some(name) = &query.name {
             q = q.filter(users::name.eq(name));
         }
-        if let Some(phone) = query.phone {
+        if let Some(phone) = &query.phone {
             q = q.filter(users::phone.eq(phone));
         }
         let l: Vec<User> = q.load(&self.conn)?;
