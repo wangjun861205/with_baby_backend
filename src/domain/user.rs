@@ -31,15 +31,15 @@ pub struct User {
 }
 
 pub trait UserPersister {
-    fn insert_user(&mut self, user: Insert) -> Result<i32, Error>;
-    fn update_user(&mut self, id: i32, user: Update) -> Result<usize, Error>;
-    fn delete_user(&mut self, id: i32) -> Result<usize, Error>;
-    fn query_user(&mut self, query: Query) -> Result<(Vec<User>, i64), Error>;
-    fn get_user(&mut self, id: i32) -> Result<User, Error>;
+    fn insert_user(&self, user: Insert) -> Result<i32, Error>;
+    fn update_user(&self, id: i32, user: Update) -> Result<usize, Error>;
+    fn delete_user(&self, id: i32) -> Result<usize, Error>;
+    fn query_user(&self, query: Query) -> Result<(Vec<User>, i64), Error>;
+    fn get_user(&self, id: i32) -> Result<User, Error>;
     fn get_user_by_phone(&self, phone: &str) -> Result<User, Error>;
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Registration {
     pub name: String,
     pub phone: String,
@@ -59,14 +59,14 @@ pub trait PasswordHasher {
     fn hash(&self, salt: &str, password: &str) -> String;
 }
 
-pub fn register<P, SG, PH>(
-    mut persister: P,
+pub fn register<UP, SG, PH>(
+    persister: UP,
     salt_generator: SG,
     password_hasher: PH,
     req: Registration,
 ) -> Result<i32, Error>
 where
-    P: UserPersister,
+    UP: UserPersister,
     SG: SaltGenerator,
     PH: PasswordHasher,
 {

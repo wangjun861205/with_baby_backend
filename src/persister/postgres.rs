@@ -44,13 +44,13 @@ impl PostgresPersister {
 }
 
 impl UserPersister for PostgresPersister {
-    fn delete_user(&mut self, id: i32) -> Result<usize, Error> {
+    fn delete_user(&self, id: i32) -> Result<usize, Error> {
         let res = diesel::delete(users::table.filter(users::id.eq(id)))
             .execute(&self.conn)
             .context("failed to delete user")?;
         Ok(res)
     }
-    fn get_user(&mut self, id: i32) -> Result<user::User, Error> {
+    fn get_user(&self, id: i32) -> Result<user::User, Error> {
         let user: User = users::table
             .filter(users::id.eq(id))
             .get_result(&self.conn)
@@ -64,7 +64,7 @@ impl UserPersister for PostgresPersister {
             .context("failed to get user by phone")?;
         Ok(user.into())
     }
-    fn insert_user(&mut self, user: crate::domain::user::Insert) -> Result<i32, Error> {
+    fn insert_user(&self, user: crate::domain::user::Insert) -> Result<i32, Error> {
         diesel::insert_into(users::table)
             .values((
                 users::name.eq(user.name),
@@ -77,7 +77,7 @@ impl UserPersister for PostgresPersister {
             .context("failed to insert user")
     }
     fn query_user(
-        &mut self,
+        &self,
         query: crate::domain::user::Query,
     ) -> Result<(Vec<crate::domain::user::User>, i64), Error> {
         let mut q = users::table.into_boxed();
@@ -99,7 +99,7 @@ impl UserPersister for PostgresPersister {
         let l: Vec<user::User> = l.into_iter().map(user::User::from).collect();
         Ok((l, total))
     }
-    fn update_user(&mut self, id: i32, user: crate::domain::user::Update) -> Result<usize, Error> {
+    fn update_user(&self, id: i32, user: crate::domain::user::Update) -> Result<usize, Error> {
         let affected = diesel::update(users::table)
             .filter(users::id.eq(id))
             .set((
