@@ -52,7 +52,7 @@ where
     Ok(Json(token))
 }
 
-pub async fn signup<PH, TK>(
+pub async fn signin<PH, TK>(
     db: Data<Pool<ConnectionManager<PgConnection>>>,
     password_hasher: Data<PH>,
     tokener: Data<TK>,
@@ -63,5 +63,7 @@ where
     TK: super::Tokener,
 {
     let p = PostgresPersister::new(db.get().unwrap());
-    user::login(p, password_hasher)
+    let uid = user::login(p, password_hasher, req)?;
+    let token = tokener.generate(uid)?;
+    Ok(token)
 }

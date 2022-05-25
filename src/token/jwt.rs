@@ -44,7 +44,7 @@ impl Tokener for JWT {
         )?;
         Ok(s)
     }
-    fn valid(&self, token: &str) -> Result<(), anyhow::Error> {
+    fn validate(&self, token: &str) -> Result<(), anyhow::Error> {
         let TokenData { header, claims } = decode::<Claims>(
             token,
             &DecodingKey::from_secret(&self.secret.as_bytes()),
@@ -104,7 +104,7 @@ where
             });
         }
         let token = cookie.unwrap().value().to_owned();
-        match self.jwt.valid(&token) {
+        match self.jwt.validate(&token) {
             Err(err) => {
                 return Box::pin(async move {
                     Err(Error::from(crate::handler::Error(

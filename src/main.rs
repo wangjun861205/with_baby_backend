@@ -33,10 +33,19 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(handler::RandomGenerator::new()))
             .app_data(Data::new(handler::Hasher::new()))
             .app_data(Data::new(pool))
-            .service(web::scope("").route(
-                "signup",
-                web::post().to(handler::user::signup::<handler::RandomGenerator, handler::Hasher>),
-            ))
+            .app_data(Data::new(jwt.clone()))
+            .service(
+                web::scope("")
+                    .route(
+                        "signup",
+                        web::post()
+                            .to(handler::user::signup::<handler::RandomGenerator, handler::Hasher>),
+                    )
+                    .route(
+                        "signin",
+                        web::post().to(handler::user::signin::<handler::Hasher, token::jwt::JWT>),
+                    ),
+            )
             .service(web::scope("api").wrap(jwt))
     })
     .bind(("localhost", 8000))?

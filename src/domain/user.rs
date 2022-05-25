@@ -46,6 +46,7 @@ pub struct Registration {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize)]
 pub struct Login {
     phone: String,
     password: String,
@@ -85,21 +86,15 @@ pub trait TokenGenerator {
     fn gen(&self, id: i32) -> String;
 }
 
-pub fn login<P, RF, PH, TG>(
-    persister: P,
-    password_hasher: PH,
-    token_generator: TG,
-    req: Login,
-) -> Result<String, Error>
+pub fn login<P, PH>(persister: P, password_hasher: PH, req: Login) -> Result<i32, Error>
 where
     P: UserPersister,
     PH: PasswordHasher,
-    TG: TokenGenerator,
 {
     let user = persister.get_user_by_phone(&req.phone)?;
     let hashed_password = password_hasher.hash(&user.salt, &req.password);
     if hashed_password != user.password {
         return Err(Error::msg("invalid phone or password"));
     }
-    Ok(token_generator.gen(user.id))
+    Ok(user.id)
 }
