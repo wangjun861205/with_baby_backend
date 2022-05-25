@@ -1,7 +1,13 @@
 use super::Error;
 use crate::domain::user;
+use crate::handler;
 use crate::persister::postgres::PostgresPersister;
-use actix_web::web::{Data, Json};
+use actix_web::{
+    cookie::Cookie,
+    http::StatusCode,
+    web::{Data, Json},
+    HttpResponse,
+};
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
@@ -57,7 +63,7 @@ pub async fn signin<PH, TK>(
     password_hasher: Data<PH>,
     tokener: Data<TK>,
     Json(req): Json<user::Login>,
-) -> Result<String, Error>
+) -> Result<HttpResponse, Error>
 where
     PH: user::PasswordHasher,
     TK: super::Tokener,
@@ -65,5 +71,13 @@ where
     let p = PostgresPersister::new(db.get().unwrap());
     let uid = user::login(p, password_hasher, req)?;
     let token = tokener.generate(uid)?;
-    Ok(token)
+    Ok(HttpResponse::Ok()
+        .cookie(
+            Cookie::build(handler::JWT_TOKEN, token)
+                .path("/")
+                .secure(true)
+                .http_only(true)
+                .finish(),
+        )
+        .finish())
 }

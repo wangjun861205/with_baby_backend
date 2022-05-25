@@ -6,6 +6,8 @@ use thiserror;
 use crate::domain::user::{PasswordHasher, SaltGenerator};
 use actix_web::ResponseError;
 
+pub static JWT_TOKEN: &str = "JWT_TOKEN";
+
 #[derive(thiserror::Error, Debug)]
 #[error(transparent)]
 pub struct Error(#[from] pub anyhow::Error);

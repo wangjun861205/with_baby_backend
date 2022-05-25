@@ -1,6 +1,7 @@
 use futures_util::future::LocalBoxFuture;
 use std::future::{ready, Ready};
 
+use crate::handler;
 use crate::handler::Tokener;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
@@ -95,7 +96,7 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let cookie = req.cookie(&"JWT_TOKEN");
+        let cookie = req.cookie(handler::JWT_TOKEN);
         if cookie.is_none() {
             return Box::pin(async move {
                 Err(Error::from(crate::handler::Error(anyhow::Error::msg(
