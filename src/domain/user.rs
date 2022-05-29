@@ -20,6 +20,7 @@ pub struct Query {
     pub phone: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
 pub struct User {
     pub id: i32,
     pub name: String,
@@ -60,12 +61,7 @@ pub trait PasswordHasher {
     fn hash(&self, salt: &str, password: &str) -> String;
 }
 
-pub fn register<UP, SG, PH>(
-    persister: UP,
-    salt_generator: SG,
-    password_hasher: PH,
-    req: Registration,
-) -> Result<i32, Error>
+pub fn register<UP, SG, PH>(persister: UP, salt_generator: SG, password_hasher: PH, req: Registration) -> Result<i32, Error>
 where
     UP: UserPersister,
     SG: SaltGenerator,

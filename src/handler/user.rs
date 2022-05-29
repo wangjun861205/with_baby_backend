@@ -38,17 +38,12 @@ where
     fn generate(&self, uid: i32) -> Result<String, anyhow::Error> {
         self.as_ref().generate(uid)
     }
-    fn validate(&self, token: &str) -> Result<(), anyhow::Error> {
+    fn validate(&self, token: &str) -> Result<i32, anyhow::Error> {
         self.as_ref().validate(token)
     }
 }
 
-pub async fn signup<SG, PH>(
-    db: Data<Pool<ConnectionManager<PgConnection>>>,
-    salt_generator: Data<SG>,
-    password_hasher: Data<PH>,
-    Json(req): Json<user::Registration>,
-) -> Result<Json<i32>, Error>
+pub async fn signup<SG, PH>(db: Data<Pool<ConnectionManager<PgConnection>>>, salt_generator: Data<SG>, password_hasher: Data<PH>, Json(req): Json<user::Registration>) -> Result<Json<i32>, Error>
 where
     SG: user::SaltGenerator,
     PH: user::PasswordHasher,
@@ -58,26 +53,12 @@ where
     Ok(Json(token))
 }
 
-pub async fn signin<PH, TK>(
-    db: Data<Pool<ConnectionManager<PgConnection>>>,
-    password_hasher: Data<PH>,
-    tokener: Data<TK>,
-    Json(req): Json<user::Login>,
-) -> Result<HttpResponse, Error>
+pub async fn signin<PH, TK>(db: Data<Pool<ConnectionManager<PgConnection>>>, password_hasher: Data<PH>, tokener: Data<TK>, Json(req): Json<user::Login>) -> Result<String, Error>
 where
     PH: user::PasswordHasher,
     TK: super::Tokener,
 {
     let p = PostgresPersister::new(db.get().unwrap());
     let uid = user::login(p, password_hasher, req)?;
-    let token = tokener.generate(uid)?;
-    Ok(HttpResponse::Ok()
-        .cookie(
-            Cookie::build(handler::JWT_TOKEN, token)
-                .path("/")
-                .secure(true)
-                .http_only(true)
-                .finish(),
-        )
-        .finish())
+    Ok(tokener.generate(uid)?)
 }

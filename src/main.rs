@@ -3,6 +3,7 @@ mod generator;
 mod handler;
 mod hasher;
 mod persister;
+mod response;
 mod schema;
 mod token;
 
@@ -12,6 +13,7 @@ extern crate serde;
 use actix_web::{
     middleware::Logger,
     web::{self, Data},
+    web::{get, post, scope},
     App, HttpServer,
 };
 use diesel::{
@@ -33,9 +35,7 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().expect("failed to load .env file");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
     HttpServer::new(move || {
-        let mgr: ConnectionManager<PgConnection> = diesel::r2d2::ConnectionManager::new(
-            dotenv::var(DATABASE_URL).expect("DATABASE_URL environment variable not exists"),
-        );
+        let mgr: ConnectionManager<PgConnection> = diesel::r2d2::ConnectionManager::new(dotenv::var(DATABASE_URL).expect("DATABASE_URL environment variable not exists"));
         let pool = Pool::new(mgr).expect("failed to create database connection pool");
         let jwt = JWT::new(
             &dotenv::var(JWT_SECRET).expect("JWT_SECRET environment variable not exists"),
@@ -53,19 +53,20 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(pool))
             .app_data(Data::new(jwt.clone()))
             .service(
-                web::scope("")
-                    .route(
-                        "signup",
-                        web::post().to(handler::user::signup::<Generator<ThreadRng>, Hasher>),
-                    )
-                    .route(
-                        "signin",
-                        web::post().to(handler::user::signin::<Hasher, token::jwt::JWT>),
-                    ),
+                scope("/")
+                    .route("signup", web::post().to(handler::user::signup::<Generator<ThreadRng>, Hasher>))
+                    .route("signin", web::post().to(handler::user::signin::<Hasher, token::jwt::JWT>)),
             )
-            .service(web::scope("api").wrap(jwt))
+            .service(
+                scope("/api")
+                    .wrap(jwt)
+                    .service(scope("/playings").route("", post().to(handler::playing::create)).route("", get().to(handler::playing::nearby))),
+            )
     })
-    .bind(("localhost", 8000))?
+    .bind((
+        dotenv::var("ADDRESS").expect("ADDRESS environment not exists"),
+        dotenv::var("PORT").expect("PORT environment not exists").parse::<u16>().expect("port must be integer"),
+    ))?
     .run()
     .await
 }

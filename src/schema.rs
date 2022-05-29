@@ -2,8 +2,8 @@ table! {
     eatings (id) {
         id -> Int4,
         name -> Varchar,
-        latitude -> Numeric,
-        longitude -> Numeric,
+        latitude -> Float8,
+        longitude -> Float8,
         discoverer -> Int4,
         create_on -> Timestamp,
         update_on -> Timestamp,
@@ -14,8 +14,8 @@ table! {
     playings (id) {
         id -> Int4,
         name -> Varchar,
-        latitude -> Numeric,
-        longitude -> Numeric,
+        latitude -> Float8,
+        longitude -> Float8,
         discoverer -> Int4,
         create_on -> Timestamp,
         update_on -> Timestamp,

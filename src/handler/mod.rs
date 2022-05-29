@@ -1,3 +1,4 @@
+pub mod playing;
 pub mod user;
 
 use anyhow;
@@ -5,6 +6,12 @@ use thiserror;
 
 use crate::domain::user::{PasswordHasher, SaltGenerator};
 use actix_web::ResponseError;
+use diesel::{
+    pg::PgConnection,
+    r2d2::{ConnectionManager, Pool},
+};
+
+type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 pub static JWT_TOKEN: &str = "JWT_TOKEN";
 
@@ -16,7 +23,7 @@ impl ResponseError for Error {}
 
 pub trait Tokener {
     fn generate(&self, uid: i32) -> Result<String, anyhow::Error>;
-    fn validate(&self, token: &str) -> Result<(), anyhow::Error>;
+    fn validate(&self, token: &str) -> Result<i32, anyhow::Error>;
 }
 
 #[derive(Debug, Clone)]

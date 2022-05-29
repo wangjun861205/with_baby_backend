@@ -34,8 +34,8 @@ execute procedure update_update_on();
 create table playings (
 	id serial not null,
 	name varchar not null,
-	latitude decimal(18, 16) not null,
-	longitude decimal(19, 16) not null,
+	latitude double precision not null,
+	longitude double precision not null,
 	discoverer int not null references users (id),
 	create_on timestamp default current_timestamp not null,
 	update_on timestamp default current_timestamp not null,
@@ -54,8 +54,8 @@ execute procedure update_update_on();
 create table eatings (
 	id serial not null,
 	name varchar not null,
-	latitude decimal(18, 16) not null,
-	longitude decimal(19, 16) not null,
+	latitude double precision not null,
+	longitude double precision not null,
 	discoverer int not null references users (id),
 	create_on timestamp default current_timestamp not null,
 	update_on timestamp default current_timestamp not null,

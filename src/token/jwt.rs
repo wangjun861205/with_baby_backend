@@ -3,11 +3,12 @@ use std::future::{ready, Ready};
 
 use crate::handler;
 use crate::handler::Tokener;
+use crate::token::UID;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
-    Error,
+    Error, HttpMessage,
 };
-use anyhow::Context;
+use anyhow::{self, Context};
 use chrono::Duration;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
@@ -45,17 +46,13 @@ impl Tokener for JWT {
         )?;
         Ok(s)
     }
-    fn validate(&self, token: &str) -> Result<(), anyhow::Error> {
-        let TokenData { header, claims } = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(&self.secret.as_bytes()),
-            &Validation::new(jsonwebtoken::Algorithm::HS256),
-        )
-        .context("failed to valid jwt token")?;
+    fn validate(&self, token: &str) -> Result<i32, anyhow::Error> {
+        let TokenData { header, claims } =
+            decode::<Claims>(token, &DecodingKey::from_secret(&self.secret.as_bytes()), &Validation::new(jsonwebtoken::Algorithm::HS256)).context("failed to valid jwt token")?;
         if claims.exp < chrono::Local::now().timestamp() as usize {
             return Err(anyhow::Error::msg("expired token").context("failed to valid jwt token"));
         }
-        Ok(())
+        Ok(claims.uid)
     }
 }
 
@@ -72,10 +69,7 @@ where
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(JWTMiddleware {
-            service: service,
-            jwt: self.clone(),
-        }))
+        ready(Ok(JWTMiddleware { service: service, jwt: self.clone() }))
     }
 }
 
@@ -96,30 +90,26 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let cookie = req.cookie(handler::JWT_TOKEN);
-        if cookie.is_none() {
-            return Box::pin(async move {
-                Err(Error::from(crate::handler::Error(anyhow::Error::msg(
-                    "faild to extract jwt token from cookie",
-                ))))
-            });
+        let headers = req.headers().get(handler::JWT_TOKEN);
+        if headers.is_none() {
+            return Box::pin(ready(Err(handler::Error::from(anyhow::Error::msg("failed to extract jwt token from request headers")).into())));
         }
-        let token = cookie.unwrap().value().to_owned();
-        match self.jwt.validate(&token) {
-            Err(err) => {
-                return Box::pin(async move {
-                    Err(Error::from(crate::handler::Error(
-                        err.context("failed to valid jwt token"),
-                    )))
-                });
-            }
-            Ok(_) => {
-                let fut = self.service.call(req);
-                return Box::pin(async move {
-                    let res = fut.await?;
-                    Ok(res)
-                });
+        let token = headers.unwrap().to_str();
+        if let Ok(t) = token {
+            match self.jwt.validate(t) {
+                Err(err) => {
+                    return Box::pin(async move { Err(Error::from(crate::handler::Error(err.context("failed to valid jwt token")))) });
+                }
+                Ok(uid) => {
+                    req.extensions_mut().insert(UID(uid));
+                    let fut = self.service.call(req);
+                    return Box::pin(async move {
+                        let res = fut.await?;
+                        Ok(res)
+                    });
+                }
             }
         }
+        return Box::pin(ready(Err(handler::Error::from(anyhow::Error::chain("invalid jwt token ")).into())));
     }
 }

@@ -1,14 +1,21 @@
-use crate::domain::user;
-use crate::domain::user::UserPersister;
+use crate::domain::{
+    playing,
+    user::{self, UserPersister},
+};
 use crate::schema::*;
 use anyhow::{Context, Error};
+use chrono::NaiveDateTime;
 use diesel::{
+    dsl::sql,
     pg::PgConnection,
     r2d2::{ConnectionManager, PooledConnection},
+    sql_types::{BigInt, Double},
     ExpressionMethods, QueryDsl, RunQueryDsl,
 };
+use serde::Serialize;
 
-#[derive(Queryable)]
+#[derive(Debug, Clone, Queryable, QueryableByName)]
+#[table_name = "users"]
 pub struct User {
     id: i32,
     name: String,
@@ -110,5 +117,64 @@ impl UserPersister for PostgresPersister {
             ))
             .execute(&self.conn)?;
         Ok(affected)
+    }
+}
+
+#[derive(Debug, Clone, QueryableByName, Queryable)]
+#[table_name = "playings"]
+pub struct Playing {
+    id: i32,
+    name: String,
+    latitude: f64,
+    longitude: f64,
+    discoverer: i32,
+    create_on: NaiveDateTime,
+    update_on: NaiveDateTime,
+}
+
+impl playing::PlayingPersister for PostgresPersister {
+    fn nearby_playings(
+        &self,
+        latitude: f64,
+        longitude: f64,
+        distance: f64,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<playing::Playing>, i64), Error> {
+        let q = playings::table
+            .inner_join(users::table)
+            .filter(sql(&format!(
+                "earth_box(ll_to_earch({}, {}), {}) @> ll_to_earch(playings.latitude, playings.longitude)",
+                latitude, longitude, distance
+            )))
+            .order_by(sql::<Double>(&format!("earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude))", latitude, longitude)));
+        let count = q.clone().count().get_result(&self.conn)?;
+        let l: Vec<(Playing, User)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
+        let res: Vec<playing::Playing> = l
+            .into_iter()
+            .map(|(p, u)| playing::Playing {
+                id: p.id,
+                name: p.name,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                discoverer: u.into(),
+                create_on: p.create_on,
+                update_on: p.update_on,
+            })
+            .collect();
+        Ok((res, count))
+    }
+
+    fn insert_playing(&self, p: playing::Creation) -> Result<i32, Error> {
+        let id = diesel::insert_into(playings::table)
+            .values((
+                playings::name.eq(p.name),
+                playings::latitude.eq(p.latitude),
+                playings::longitude.eq(p.longitude),
+                playings::discoverer.eq(p.discoverer),
+            ))
+            .returning(playings::id)
+            .get_result(&self.conn)?;
+        Ok(id)
     }
 }
