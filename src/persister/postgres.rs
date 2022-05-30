@@ -6,6 +6,7 @@ use crate::schema::*;
 use anyhow::{Context, Error};
 use chrono::NaiveDateTime;
 use diesel::{
+    debug_query,
     dsl::sql,
     pg::PgConnection,
     r2d2::{ConnectionManager, PooledConnection},
@@ -52,41 +53,25 @@ impl PostgresPersister {
 
 impl UserPersister for PostgresPersister {
     fn delete_user(&self, id: i32) -> Result<usize, Error> {
-        let res = diesel::delete(users::table.filter(users::id.eq(id)))
-            .execute(&self.conn)
-            .context("failed to delete user")?;
+        let res = diesel::delete(users::table.filter(users::id.eq(id))).execute(&self.conn).context("failed to delete user")?;
         Ok(res)
     }
     fn get_user(&self, id: i32) -> Result<user::User, Error> {
-        let user: User = users::table
-            .filter(users::id.eq(id))
-            .get_result(&self.conn)
-            .context("failed to get user")?;
+        let user: User = users::table.filter(users::id.eq(id)).get_result(&self.conn).context("failed to get user")?;
         Ok(user.into())
     }
     fn get_user_by_phone(&self, phone: &str) -> Result<crate::domain::user::User, Error> {
-        let user: User = users::table
-            .filter(users::phone.eq(phone))
-            .get_result(&self.conn)
-            .context("failed to get user by phone")?;
+        let user: User = users::table.filter(users::phone.eq(phone)).get_result(&self.conn).context("failed to get user by phone")?;
         Ok(user.into())
     }
     fn insert_user(&self, user: crate::domain::user::Insert) -> Result<i32, Error> {
         diesel::insert_into(users::table)
-            .values((
-                users::name.eq(user.name),
-                users::phone.eq(user.phone),
-                users::password.eq(user.password),
-                users::salt.eq(user.salt),
-            ))
+            .values((users::name.eq(user.name), users::phone.eq(user.phone), users::password.eq(user.password), users::salt.eq(user.salt)))
             .returning(users::id)
             .get_result(&self.conn)
             .context("failed to insert user")
     }
-    fn query_user(
-        &self,
-        query: crate::domain::user::Query,
-    ) -> Result<(Vec<crate::domain::user::User>, i64), Error> {
+    fn query_user(&self, query: crate::domain::user::Query) -> Result<(Vec<crate::domain::user::User>, i64), Error> {
         let mut q = users::table.into_boxed();
         if let Some(name) = &query.name {
             q = q.filter(users::name.eq(name));
@@ -109,12 +94,7 @@ impl UserPersister for PostgresPersister {
     fn update_user(&self, id: i32, user: crate::domain::user::Update) -> Result<usize, Error> {
         let affected = diesel::update(users::table)
             .filter(users::id.eq(id))
-            .set((
-                users::name.eq(user.name),
-                users::phone.eq(user.phone),
-                users::password.eq(user.password),
-                users::salt.eq(user.salt),
-            ))
+            .set((users::name.eq(user.name), users::phone.eq(user.phone), users::password.eq(user.password), users::salt.eq(user.salt)))
             .execute(&self.conn)?;
         Ok(affected)
     }
@@ -133,22 +113,22 @@ pub struct Playing {
 }
 
 impl playing::PlayingPersister for PostgresPersister {
-    fn nearby_playings(
-        &self,
-        latitude: f64,
-        longitude: f64,
-        distance: f64,
-        limit: i64,
-        offset: i64,
-    ) -> Result<(Vec<playing::Playing>, i64), Error> {
+    fn nearby_playings(&self, latitude: f64, longitude: f64, distance: f64, limit: i64, offset: i64) -> Result<(Vec<playing::Playing>, i64), Error> {
+        let q = playings::table.inner_join(users::table).filter(sql(&format!(
+            "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
+            latitude, longitude, distance
+        )));
+        let count = q.count().get_result(&self.conn)?;
         let q = playings::table
             .inner_join(users::table)
             .filter(sql(&format!(
-                "earth_box(ll_to_earch({}, {}), {}) @> ll_to_earch(playings.latitude, playings.longitude)",
+                "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
                 latitude, longitude, distance
             )))
-            .order_by(sql::<Double>(&format!("earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude))", latitude, longitude)));
-        let count = q.clone().count().get_result(&self.conn)?;
+            .order_by(sql::<Double>(&format!(
+                "earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude))",
+                latitude, longitude
+            )));
         let l: Vec<(Playing, User)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
         let res: Vec<playing::Playing> = l
             .into_iter()

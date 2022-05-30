@@ -110,6 +110,6 @@ where
                 }
             }
         }
-        return Box::pin(ready(Err(handler::Error::from(anyhow::Error::chain("invalid jwt token ")).into())));
+        return Box::pin(ready(Err(handler::Error::from(anyhow::Error::msg("invalid jwt token")).into())));
     }
 }
