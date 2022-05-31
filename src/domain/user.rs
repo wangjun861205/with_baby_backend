@@ -38,6 +38,7 @@ pub trait UserPersister {
     fn query_user(&self, query: Query) -> Result<(Vec<User>, i64), Error>;
     fn get_user(&self, id: i32) -> Result<User, Error>;
     fn get_user_by_phone(&self, phone: &str) -> Result<User, Error>;
+    fn exists_user_by_phone(&self, phone: &str) -> Result<bool, Error>;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,6 +68,9 @@ where
     SG: SaltGenerator,
     PH: PasswordHasher,
 {
+    if persister.exists_user_by_phone(&req.phone)? {
+        return Err(Error::msg("phone already exists"));
+    }
     let salt = salt_generator.gen();
     let hashed_password = password_hasher.hash(&salt, &req.password);
     let id = persister.insert_user(Insert {

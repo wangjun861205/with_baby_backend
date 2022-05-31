@@ -1,4 +1,5 @@
 pub mod playing;
+pub mod responses;
 pub mod user;
 
 use anyhow;

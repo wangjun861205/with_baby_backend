@@ -1,0 +1,5 @@
+url="http://localhost:8000/user/signin"
+request=POST
+header="Content-Type: application/json"
+data=@signin.json
+

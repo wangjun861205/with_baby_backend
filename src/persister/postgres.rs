@@ -6,14 +6,12 @@ use crate::schema::*;
 use anyhow::{Context, Error};
 use chrono::NaiveDateTime;
 use diesel::{
-    debug_query,
-    dsl::sql,
+    dsl::{exists, select, sql},
     pg::PgConnection,
     r2d2::{ConnectionManager, PooledConnection},
-    sql_types::{BigInt, Double},
+    sql_types::Double,
     ExpressionMethods, QueryDsl, RunQueryDsl,
 };
-use serde::Serialize;
 
 #[derive(Debug, Clone, Queryable, QueryableByName)]
 #[table_name = "users"]
@@ -98,6 +96,11 @@ impl UserPersister for PostgresPersister {
             .execute(&self.conn)?;
         Ok(affected)
     }
+
+    fn exists_user_by_phone(&self, phone: &str) -> Result<bool, Error> {
+        let exists = select(exists(users::table.filter(users::phone.eq(phone)))).get_result::<bool>(&self.conn)?;
+        Ok(exists)
+    }
 }
 
 #[derive(Debug, Clone, QueryableByName, Queryable)]
@@ -118,17 +121,17 @@ impl playing::PlayingPersister for PostgresPersister {
             "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
             latitude, longitude, distance
         )));
-        let count = q.count().get_result(&self.conn)?;
-        let q = playings::table
-            .inner_join(users::table)
-            .filter(sql(&format!(
-                "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
-                latitude, longitude, distance
-            )))
-            .order_by(sql::<Double>(&format!(
-                "earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude))",
-                latitude, longitude
-            )));
+        let count = q.clone().count().get_result(&self.conn)?;
+        // let q = playings::table
+        //     .inner_join(users::table)
+        //     .filter(sql(&format!(
+        //         "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
+        //         latitude, longitude, distance
+        //     )))
+        let q = q.clone().order_by(sql::<Double>(&format!(
+            "earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude))",
+            latitude, longitude
+        )));
         let l: Vec<(Playing, User)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
         let res: Vec<playing::Playing> = l
             .into_iter()

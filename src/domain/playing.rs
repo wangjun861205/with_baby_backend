@@ -29,7 +29,9 @@ pub trait PlayingPersister {
 }
 
 pub fn nearby_playings<PP: PlayingPersister>(persister: PP, latitude: f64, longitude: f64, distance: f64, page: i64, size: i64) -> Result<(Vec<Playing>, i64), Error> {
-    persister.nearby_playings(latitude, longitude, distance, page, size).context("failed to get nearby playings")
+    persister
+        .nearby_playings(latitude, longitude, distance, size, (page - 1) * size)
+        .context("failed to get nearby playings")
 }
 
 pub fn create_playing<PP: PlayingPersister + UserPersister>(persister: PP, playing: Creation) -> Result<i32, Error> {

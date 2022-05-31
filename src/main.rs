@@ -53,9 +53,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(pool))
             .app_data(Data::new(jwt.clone()))
             .service(
-                scope("/")
-                    .route("signup", web::post().to(handler::user::signup::<Generator<ThreadRng>, Hasher>))
-                    .route("signin", web::post().to(handler::user::signin::<Hasher, token::jwt::JWT>)),
+                scope("/user")
+                    .route("/signup", web::post().to(handler::user::signup::<Generator<ThreadRng>, Hasher>))
+                    .route("/signin", web::post().to(handler::user::signin::<Hasher, token::jwt::JWT>)),
             )
             .service(
                 scope("/api")
