@@ -128,14 +128,21 @@ impl playing::PlayingPersister for PostgresPersister {
         //         "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
         //         latitude, longitude, distance
         //     )))
-        let q = q.clone().order_by(sql::<Double>(&format!(
-            "earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude))",
-            latitude, longitude
-        )));
-        let l: Vec<(Playing, User)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
+        let q = q
+            .clone()
+            .select((
+                playings::all_columns,
+                users::all_columns,
+                sql::<Double>(&format!(
+                    "earth_distance(ll_to_earth({}, {}), ll_to_earth(playings.latitude, playings.longitude)) as distance",
+                    latitude, longitude
+                )),
+            ))
+            .order_by(sql::<Double>("distance"));
+        let l: Vec<(Playing, User, f64)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
         let res: Vec<playing::Playing> = l
             .into_iter()
-            .map(|(p, u)| playing::Playing {
+            .map(|(p, u, distance)| playing::Playing {
                 id: p.id,
                 name: p.name,
                 latitude: p.latitude,
