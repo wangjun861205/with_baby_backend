@@ -116,18 +116,12 @@ pub struct Playing {
 }
 
 impl playing::PlayingPersister for PostgresPersister {
-    fn nearby_playings(&self, latitude: f64, longitude: f64, distance: f64, limit: i64, offset: i64) -> Result<(Vec<playing::Playing>, i64), Error> {
+    fn nearby_playings(&self, latitude: f64, longitude: f64, distance: f64, limit: i64, offset: i64) -> Result<(Vec<(playing::Playing, f64)>, i64), Error> {
         let q = playings::table.inner_join(users::table).filter(sql(&format!(
             "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
             latitude, longitude, distance
         )));
         let count = q.clone().count().get_result(&self.conn)?;
-        // let q = playings::table
-        //     .inner_join(users::table)
-        //     .filter(sql(&format!(
-        //         "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(playings.latitude, playings.longitude)",
-        //         latitude, longitude, distance
-        //     )))
         let q = q
             .clone()
             .select((
@@ -140,16 +134,21 @@ impl playing::PlayingPersister for PostgresPersister {
             ))
             .order_by(sql::<Double>("distance"));
         let l: Vec<(Playing, User, f64)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
-        let res: Vec<playing::Playing> = l
+        let res: Vec<(playing::Playing, f64)> = l
             .into_iter()
-            .map(|(p, u, distance)| playing::Playing {
-                id: p.id,
-                name: p.name,
-                latitude: p.latitude,
-                longitude: p.longitude,
-                discoverer: u.into(),
-                create_on: p.create_on,
-                update_on: p.update_on,
+            .map(|(p, u, distance)| {
+                (
+                    playing::Playing {
+                        id: p.id,
+                        name: p.name,
+                        latitude: p.latitude,
+                        longitude: p.longitude,
+                        discoverer: u.into(),
+                        create_on: p.create_on,
+                        update_on: p.update_on,
+                    },
+                    distance,
+                )
             })
             .collect();
         Ok((res, count))

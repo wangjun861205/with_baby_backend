@@ -1,2 +1,2 @@
-url="http://localhost:8000/api/playings?page=1&size=10&latitude=36.63849315243944&longitude=117.0346572042404"
+url="http://localhost:8000/api/playings?page=1&size=10&latitude=36.652667356623994&longitude=117.02271430259371"
 header=@headers
