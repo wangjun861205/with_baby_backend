@@ -1,6 +1,6 @@
 use super::Error;
 use crate::domain::user;
-use crate::handler;
+use crate::handlers;
 use crate::persister::postgres::PostgresPersister;
 use actix_web::{
     cookie::Cookie,

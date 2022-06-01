@@ -1,8 +1,5 @@
-use futures_util::future::LocalBoxFuture;
-use std::future::{ready, Ready};
-
-use crate::handler;
-use crate::handler::Tokener;
+use crate::handlers;
+use crate::handlers::Tokener;
 use crate::token::UID;
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
@@ -10,8 +7,10 @@ use actix_web::{
 };
 use anyhow::{self, Context};
 use chrono::Duration;
+use futures_util::future::LocalBoxFuture;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
+use std::future::{ready, Ready};
 
 #[derive(Debug, Clone)]
 pub struct JWT {
@@ -90,15 +89,15 @@ where
     forward_ready!(service);
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
-        let headers = req.headers().get(handler::JWT_TOKEN);
+        let headers = req.headers().get(handlers::JWT_TOKEN);
         if headers.is_none() {
-            return Box::pin(ready(Err(handler::Error::from(anyhow::Error::msg("failed to extract jwt token from request headers")).into())));
+            return Box::pin(ready(Err(handlers::Error::from(anyhow::Error::msg("failed to extract jwt token from request headers")).into())));
         }
         let token = headers.unwrap().to_str();
         if let Ok(t) = token {
             match self.jwt.validate(t) {
                 Err(err) => {
-                    return Box::pin(async move { Err(Error::from(crate::handler::Error(err.context("failed to valid jwt token")))) });
+                    return Box::pin(async move { Err(Error::from(crate::handlers::Error(err.context("failed to valid jwt token")))) });
                 }
                 Ok(uid) => {
                     req.extensions_mut().insert(UID(uid));
@@ -110,6 +109,6 @@ where
                 }
             }
         }
-        return Box::pin(ready(Err(handler::Error::from(anyhow::Error::msg("invalid jwt token")).into())));
+        return Box::pin(ready(Err(handlers::Error::from(anyhow::Error::msg("invalid jwt token")).into())));
     }
 }

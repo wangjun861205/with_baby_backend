@@ -1,6 +1,6 @@
 mod domain;
 mod generator;
-mod handler;
+mod handlers;
 mod hasher;
 mod persister;
 mod response;
@@ -12,8 +12,8 @@ extern crate diesel;
 extern crate serde;
 use actix_web::{
     middleware::Logger,
+    web::scope,
     web::{self, Data},
-    web::{get, post, scope},
     App, HttpServer,
 };
 use diesel::{
@@ -22,6 +22,7 @@ use diesel::{
 };
 use env_logger;
 use generator::random::Generator;
+use handlers::playing;
 use hasher::sha::Hasher;
 use rand::{rngs::ThreadRng, thread_rng};
 use token::jwt::JWT;
@@ -54,14 +55,10 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(jwt.clone()))
             .service(
                 scope("/user")
-                    .route("/signup", web::post().to(handler::user::signup::<Generator<ThreadRng>, Hasher>))
-                    .route("/signin", web::post().to(handler::user::signin::<Hasher, token::jwt::JWT>)),
+                    .route("/signup", web::post().to(handlers::user::signup::<Generator<ThreadRng>, Hasher>))
+                    .route("/signin", web::post().to(handlers::user::signin::<Hasher, token::jwt::JWT>)),
             )
-            .service(
-                scope("/api")
-                    .wrap(jwt)
-                    .service(scope("/playings").route("", post().to(handler::playing::create)).route("", get().to(handler::playing::nearby))),
-            )
+            .service(scope("/api").service(playing::register_router().wrap(jwt)))
     })
     .bind((
         dotenv::var("ADDRESS").expect("ADDRESS environment not exists"),

@@ -7,11 +7,15 @@ use crate::persister::postgres::PostgresPersister;
 use crate::response::ListResponse;
 use crate::token::UID;
 use actix_web::{
-    web::{Data, Json, Query},
-    HttpRequest,
+    web::{get, post, resource, Data, Json, Query},
+    Resource,
 };
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
+
+pub fn register_router() -> Resource {
+    resource("/playings").route(get().to(nearby)).route(post().to(create))
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct NearbyParams {
