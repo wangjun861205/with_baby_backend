@@ -1,5 +1,6 @@
 use crate::domain::{
     playing,
+    upload::{self, Insertion, UploadPersister},
     user::{self, UserPersister},
 };
 use crate::schema::*;
@@ -10,7 +11,7 @@ use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, PooledConnection},
     sql_types::Double,
-    ExpressionMethods, QueryDsl, RunQueryDsl,
+    Associations, BelongingToDsl, ExpressionMethods, GroupedBy, QueryDsl, RunQueryDsl,
 };
 
 #[derive(Debug, Clone, Queryable, QueryableByName)]
@@ -103,7 +104,7 @@ impl UserPersister for PostgresPersister {
     }
 }
 
-#[derive(Debug, Clone, QueryableByName, Queryable)]
+#[derive(Identifiable, Debug, Clone, QueryableByName, Queryable, PartialEq)]
 #[table_name = "playings"]
 pub struct Playing {
     id: i32,
@@ -134,9 +135,12 @@ impl playing::PlayingPersister for PostgresPersister {
             ))
             .order_by(sql::<Double>("distance"));
         let l: Vec<(Playing, User, f64)> = q.clone().limit(limit).offset(offset).load(&self.conn)?;
+        let ps: Vec<Playing> = l.iter().map(|(p, _, _)| p.clone()).collect();
+        let uploads: Vec<Vec<(PlayingsUpload, Upload)>> = PlayingsUpload::belonging_to(&ps).inner_join(uploads::table).load(&self.conn)?.grouped_by(&ps);
         let res: Vec<(playing::Playing, f64)> = l
             .into_iter()
-            .map(|(p, u, distance)| {
+            .zip(uploads)
+            .map(|((p, u, distance), images)| {
                 (
                     playing::Playing {
                         id: p.id,
@@ -144,6 +148,7 @@ impl playing::PlayingPersister for PostgresPersister {
                         latitude: p.latitude,
                         longitude: p.longitude,
                         discoverer: u.into(),
+                        images: images.into_iter().map(|(_, u)| u.into()).collect(),
                         create_on: p.create_on,
                         update_on: p.update_on,
                     },
@@ -164,6 +169,64 @@ impl playing::PlayingPersister for PostgresPersister {
             ))
             .returning(playings::id)
             .get_result(&self.conn)?;
+        for img in p.images {
+            diesel::insert_into(playings_uploads::table)
+                .values((playings_uploads::playing_id.eq(id), playings_uploads::upload_id.eq(img)))
+                .execute(&self.conn)?;
+        }
         Ok(id)
     }
+}
+
+#[derive(Queryable)]
+struct Upload {
+    id: i32,
+    fetch_code: String,
+    owner: i32,
+    create_on: NaiveDateTime,
+    update_on: NaiveDateTime,
+}
+
+impl Into<upload::Upload> for Upload {
+    fn into(self) -> upload::Upload {
+        upload::Upload {
+            id: self.id,
+            fetch_code: self.fetch_code,
+            owner: self.owner,
+            create_on: self.create_on,
+            update_on: self.update_on,
+        }
+    }
+}
+
+impl UploadPersister for PostgresPersister {
+    fn insert_upload(&self, ins: Insertion) -> Result<i32, Error> {
+        let id = diesel::insert_into(uploads::table)
+            .values((uploads::fetch_code.eq(ins.fetch_code), uploads::owner.eq(ins.owner)))
+            .returning(uploads::id)
+            .get_result(&self.conn)?;
+        Ok(id)
+    }
+
+    fn get_upload(&self, id: i32) -> Result<upload::Upload, Error> {
+        let u: Upload = uploads::table.find(id).get_result(&self.conn)?;
+        Ok(u.into())
+    }
+
+    fn query_upload_by_ids(&self, ids: &Vec<i32>) -> Result<Vec<upload::Upload>, Error> {
+        uploads::table
+            .filter(uploads::id.eq_any(ids))
+            .load::<Upload>(&self.conn)
+            .map(|l| l.into_iter().map(|u| u.into()).collect())
+            .map_err(|e| Error::from(e))
+    }
+}
+
+#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[belongs_to(Playing)]
+#[belongs_to(Upload)]
+pub struct PlayingsUpload {
+    id: i32,
+    playing_id: i32,
+    upload_id: i32,
 }

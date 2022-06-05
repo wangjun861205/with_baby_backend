@@ -1,5 +1,6 @@
 pub mod playing;
 pub mod user;
+pub mod upload;
 
 use anyhow;
 use thiserror;

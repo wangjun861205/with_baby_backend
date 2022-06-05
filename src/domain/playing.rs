@@ -1,5 +1,8 @@
-use super::user::{User, UserPersister};
-use crate::domain::outcomes;
+use super::user::User;
+use crate::domain::{
+    outcomes,
+    upload::{Upload, UploadPersister},
+};
 use anyhow::{Context, Error};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -11,6 +14,7 @@ pub struct Playing {
     pub discoverer: User,
     pub latitude: f64,
     pub longitude: f64,
+    pub images: Vec<Upload>,
     pub create_on: NaiveDateTime,
     pub update_on: NaiveDateTime,
 }
@@ -21,6 +25,7 @@ pub struct Creation {
     pub latitude: f64,
     pub longitude: f64,
     pub discoverer: i32,
+    pub images: Vec<i32>,
 }
 
 pub trait PlayingPersister {
@@ -36,6 +41,15 @@ pub fn nearby_playings<PP: PlayingPersister>(persister: PP, latitude: f64, longi
         .map(|(playings, total)| (playings.into_iter().map(|v| v.into()).collect(), total))
 }
 
-pub fn create_playing<PP: PlayingPersister>(persister: PP, playing: Creation) -> Result<i32, Error> {
+pub fn create_playing<PP: PlayingPersister + UploadPersister>(persister: PP, playing: Creation) -> Result<i32, Error> {
+    let images = persister.query_upload_by_ids(&playing.images)?;
+    // 如果找不到全部用户所提供的图片则报错
+    if images.len() != playing.images.len() {
+        return Err(Error::msg("cannot find all images").context("failed to create playing"));
+    }
+    // 如果用户提供的图片包含不是属于他自己的图片则报错
+    if images.into_iter().any(|u| u.owner != playing.discoverer) {
+        return Err(Error::msg("no permission to use other's image").context("failed to create playing"));
+    }
     persister.insert_playing(playing)
 }

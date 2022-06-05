@@ -37,6 +37,7 @@ pub struct CreateRequest {
     name: String,
     latitude: f64,
     longitude: f64,
+    images: Vec<i32>,
 }
 
 pub async fn create(UID(uid): UID, Json(req): Json<CreateRequest>, db: Data<PgPool>) -> Result<Json<i32>, Error> {
@@ -49,6 +50,7 @@ pub async fn create(UID(uid): UID, Json(req): Json<CreateRequest>, db: Data<PgPo
             latitude: req.latitude,
             longitude: req.longitude,
             discoverer: uid,
+            images: req.images,
         },
     )
     .context(err_ctx)?;
