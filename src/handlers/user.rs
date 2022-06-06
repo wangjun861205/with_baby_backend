@@ -12,6 +12,7 @@ use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
+use serde::Serialize;
 
 impl<T> user::SaltGenerator for Data<T>
 where
@@ -61,4 +62,10 @@ where
     let p = PostgresPersister::new(db.get().unwrap());
     let uid = user::login(p, password_hasher, req)?;
     Ok(tokener.generate(uid)?)
+}
+
+#[derive(Debug, Serialize)]
+pub struct User {
+    id: i32,
+    name: String,
 }

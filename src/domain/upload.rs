@@ -27,8 +27,14 @@ pub struct Insertion {
     pub owner: i32,
 }
 
+pub struct EatingUploadsInsertion {
+    pub eating_id: i32,
+    pub upload_ids: Vec<i32>,
+}
+
 pub trait UploadPersister {
     fn insert_upload(&self, ins: Insertion) -> Result<i32, Error>;
+    fn insert_eating_uploads(&self, ins: EatingUploadsInsertion) -> Result<usize, Error>;
     fn get_upload(&self, id: i32) -> Result<Upload, Error>;
     fn query_upload_by_ids(&self, ids: &Vec<i32>) -> Result<Vec<Upload>, Error>;
     fn query_upload_by_eatings(&self, eatings: &Vec<Eating>) -> Result<Vec<Vec<Upload>>, Error>;

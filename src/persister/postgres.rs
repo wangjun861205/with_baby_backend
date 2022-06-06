@@ -1,5 +1,6 @@
 use crate::domain::{
-    eating, playing,
+    eating::{self, EatingPersister},
+    playing,
     upload::{self, Insertion, UploadPersister},
     user::{self, UserPersister},
 };
@@ -8,6 +9,7 @@ use anyhow::{Context, Error};
 use chrono::NaiveDateTime;
 use diesel::{
     dsl::{exists, select, sql, sql_query},
+    insert_into,
     pg::PgConnection,
     r2d2::{ConnectionManager, PooledConnection},
     sql_types::{Array, Double, Integer},
@@ -225,6 +227,11 @@ pub struct EatingsUpload {
     upload_id: i32,
 }
 
+pub struct EatingUploadsInsertion {
+    eating_id: i32,
+    upload_ids: Vec<i32>,
+}
+
 impl UploadPersister for PostgresPersister {
     fn insert_upload(&self, ins: Insertion) -> Result<i32, Error> {
         let id = diesel::insert_into(uploads::table)
@@ -232,6 +239,18 @@ impl UploadPersister for PostgresPersister {
             .returning(uploads::id)
             .get_result(&self.conn)?;
         Ok(id)
+    }
+
+    fn insert_eating_uploads(&self, ins: upload::EatingUploadsInsertion) -> Result<usize, Error> {
+        insert_into(eatings_uploads::table)
+            .values(
+                ins.upload_ids
+                    .into_iter()
+                    .map(|uid| (eatings_uploads::eating_id.eq(ins.eating_id), eatings_uploads::upload_id.eq(uid)))
+                    .collect::<Vec<(_, _)>>(),
+            )
+            .execute(&self.conn)
+            .context("failed to insert eating and upload relation")
     }
 
     fn get_upload(&self, id: i32) -> Result<upload::Upload, Error> {
@@ -278,5 +297,50 @@ impl<T: Borrow<eating::Eating>> From<T> for Eating {
             create_on: e.create_on,
             update_on: e.update_on,
         }
+    }
+}
+
+impl EatingPersister for PostgresPersister {
+    fn query_eating_by_distance(&self, query: eating::QueryByDistance) -> Result<Vec<eating::Eating>, Error> {
+        let results: Vec<(Eating, f64)> = eatings::table
+            .select((
+                eatings::all_columns,
+                sql(&format!(
+                    "earth_distance(ll_to_earth(latitude, longitude) as distance, ll_to_earth({}, {}))",
+                    query.latitude, query.longitude
+                )),
+            ))
+            .filter(sql(&format!(
+                "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(latitude, longitude)",
+                query.latitude, query.longitude, query.radius
+            )))
+            .order_by(sql::<Double>("disatnce"))
+            .load(&self.conn)?;
+        Ok(results
+            .into_iter()
+            .map(|(e, d)| eating::Eating {
+                id: e.id,
+                name: e.name,
+                latitude: e.latitude,
+                longitude: e.longitude,
+                discoverer: e.discoverer,
+                create_on: e.create_on,
+                update_on: e.update_on,
+                distance: d,
+            })
+            .collect())
+    }
+
+    fn insert_eating(&self, ins: eating::Insertion) -> Result<i32, Error> {
+        insert_into(eatings::table)
+            .values((
+                eatings::name.eq(ins.name),
+                eatings::latitude.eq(ins.latitude),
+                eatings::longitude.eq(ins.longitude),
+                eatings::discoverer.eq(ins.discoverer),
+            ))
+            .returning(eatings::id)
+            .get_result(&self.conn)
+            .context("failed to insert eating")
     }
 }

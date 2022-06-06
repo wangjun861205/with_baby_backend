@@ -1,6 +1,7 @@
+pub mod eating;
 pub mod playing;
-pub mod user;
 pub mod upload;
+pub mod user;
 
 use anyhow;
 use thiserror;
@@ -11,6 +12,8 @@ use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
+use r2d2;
+use serde::Serialize;
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
@@ -18,7 +21,10 @@ pub static JWT_TOKEN: &str = "JWT_TOKEN";
 
 #[derive(thiserror::Error, Debug)]
 #[error(transparent)]
-pub struct Error(#[from] pub anyhow::Error);
+pub enum Error {
+    AnyhowError(#[from] anyhow::Error),
+    R2D2Error(#[from] r2d2::Error),
+}
 
 impl ResponseError for Error {}
 
@@ -55,4 +61,10 @@ impl PasswordHasher for Hasher {
     fn hash(&self, salt: &str, password: &str) -> String {
         return "fake password".into();
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct QueryResponse<T: Serialize> {
+    list: Vec<T>,
+    total: i64,
 }

@@ -97,7 +97,7 @@ where
         if let Ok(t) = token {
             match self.jwt.validate(t) {
                 Err(err) => {
-                    return Box::pin(async move { Err(Error::from(crate::handlers::Error(err.context("failed to valid jwt token")))) });
+                    return Box::pin(async move { Err(Error::from(crate::handlers::Error::AnyhowError(err))) });
                 }
                 Ok(uid) => {
                     req.extensions_mut().insert(UID(uid));
