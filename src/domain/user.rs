@@ -39,6 +39,7 @@ pub trait UserPersister {
     fn get_user(&self, id: i32) -> Result<User, Error>;
     fn get_user_by_phone(&self, phone: &str) -> Result<User, Error>;
     fn exists_user_by_phone(&self, phone: &str) -> Result<bool, Error>;
+    fn query_user_by_ids(&self, ids: Vec<i32>) -> Result<Vec<User>, Error>;
 }
 
 #[derive(Debug, Serialize, Deserialize)]

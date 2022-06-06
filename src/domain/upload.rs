@@ -1,3 +1,4 @@
+use crate::domain::eating::Eating;
 use anyhow::{Context, Error};
 use bytes::Bytes;
 use chrono::NaiveDateTime;
@@ -30,6 +31,7 @@ pub trait UploadPersister {
     fn insert_upload(&self, ins: Insertion) -> Result<i32, Error>;
     fn get_upload(&self, id: i32) -> Result<Upload, Error>;
     fn query_upload_by_ids(&self, ids: &Vec<i32>) -> Result<Vec<Upload>, Error>;
+    fn query_upload_by_eatings(&self, eatings: &Vec<Eating>) -> Result<Vec<Vec<Upload>>, Error>;
 }
 
 pub async fn upload<S, P, SM, SK, IS>(mut stream: IS, storer: S, persister: P, uid: i32) -> Result<i32, Error>

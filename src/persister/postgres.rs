@@ -1,5 +1,5 @@
 use crate::domain::{
-    playing,
+    eating, playing,
     upload::{self, Insertion, UploadPersister},
     user::{self, UserPersister},
 };
@@ -7,12 +7,13 @@ use crate::schema::*;
 use anyhow::{Context, Error};
 use chrono::NaiveDateTime;
 use diesel::{
-    dsl::{exists, select, sql},
+    dsl::{exists, select, sql, sql_query},
     pg::PgConnection,
     r2d2::{ConnectionManager, PooledConnection},
-    sql_types::Double,
+    sql_types::{Array, Double, Integer},
     Associations, BelongingToDsl, ExpressionMethods, GroupedBy, QueryDsl, RunQueryDsl,
 };
+use std::borrow::Borrow;
 
 #[derive(Debug, Clone, Queryable, QueryableByName)]
 #[table_name = "users"]
@@ -101,6 +102,13 @@ impl UserPersister for PostgresPersister {
     fn exists_user_by_phone(&self, phone: &str) -> Result<bool, Error> {
         let exists = select(exists(users::table.filter(users::phone.eq(phone)))).get_result::<bool>(&self.conn)?;
         Ok(exists)
+    }
+
+    fn query_user_by_ids(&self, ids: Vec<i32>) -> Result<Vec<user::User>, Error> {
+        let us: Vec<User> = sql_query("SELECT u.* FROM users AS u JOIN unnest(ARRAY$1) AS ids ON u.id = ids")
+            .bind::<Array<Integer>, _>(ids)
+            .load(&self.conn)?;
+        Ok(us.into_iter().map(|u| u.into()).collect())
     }
 }
 
@@ -199,6 +207,24 @@ impl Into<upload::Upload> for Upload {
     }
 }
 
+#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[belongs_to(Playing)]
+#[belongs_to(Upload)]
+pub struct PlayingsUpload {
+    id: i32,
+    playing_id: i32,
+    upload_id: i32,
+}
+
+#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
+#[belongs_to(Eating)]
+#[belongs_to(Upload)]
+pub struct EatingsUpload {
+    id: i32,
+    eating_id: i32,
+    upload_id: i32,
+}
+
 impl UploadPersister for PostgresPersister {
     fn insert_upload(&self, ins: Insertion) -> Result<i32, Error> {
         let id = diesel::insert_into(uploads::table)
@@ -220,13 +246,37 @@ impl UploadPersister for PostgresPersister {
             .map(|l| l.into_iter().map(|u| u.into()).collect())
             .map_err(|e| Error::from(e))
     }
+
+    fn query_upload_by_eatings(&self, eatings: &Vec<crate::domain::eating::Eating>) -> Result<Vec<Vec<upload::Upload>>, Error> {
+        let eatings: Vec<Eating> = eatings.into_iter().map(|e| Eating::from(e)).collect();
+        let uploads: Vec<Vec<(EatingsUpload, Upload)>> = EatingsUpload::belonging_to(&eatings).inner_join(uploads::table).load(&self.conn)?.grouped_by(&eatings);
+        Ok(uploads.into_iter().map(|l| l.into_iter().map(|(_, u)| u.into()).collect()).collect())
+    }
 }
 
-#[derive(Identifiable, Queryable, Associations, PartialEq, Debug)]
-#[belongs_to(Playing)]
-#[belongs_to(Upload)]
-pub struct PlayingsUpload {
+#[derive(Identifiable, Debug, Clone, QueryableByName, Queryable, PartialEq)]
+#[table_name = "eatings"]
+pub struct Eating {
     id: i32,
-    playing_id: i32,
-    upload_id: i32,
+    name: String,
+    latitude: f64,
+    longitude: f64,
+    discoverer: i32,
+    create_on: NaiveDateTime,
+    update_on: NaiveDateTime,
+}
+
+impl<T: Borrow<eating::Eating>> From<T> for Eating {
+    fn from(src: T) -> Self {
+        let e = src.borrow();
+        Self {
+            id: e.id,
+            name: e.name.clone(),
+            latitude: e.latitude,
+            longitude: e.longitude,
+            discoverer: e.discoverer,
+            create_on: e.create_on,
+            update_on: e.update_on,
+        }
+    }
 }
