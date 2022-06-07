@@ -68,3 +68,9 @@ pub struct QueryResponse<T: Serialize> {
     list: Vec<T>,
     total: i64,
 }
+
+impl<T: Serialize> QueryResponse<T> {
+    pub fn new(list: Vec<T>, total: i64) -> Self {
+        Self { list: list, total: total }
+    }
+}

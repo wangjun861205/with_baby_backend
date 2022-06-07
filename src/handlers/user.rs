@@ -69,3 +69,9 @@ pub struct User {
     id: i32,
     name: String,
 }
+
+impl From<user::User> for User {
+    fn from(u: user::User) -> Self {
+        Self { id: u.id, name: u.name }
+    }
+}

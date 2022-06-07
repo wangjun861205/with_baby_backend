@@ -23,7 +23,7 @@ use diesel::{
 };
 use env_logger;
 use generator::random::Generator;
-use handlers::{playing, upload};
+use handlers::{eating, playing, upload};
 use hasher::sha::Hasher;
 use rand::{rngs::ThreadRng, thread_rng};
 use token::jwt::JWT;
@@ -60,6 +60,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/signin", web::post().to(handlers::user::signin::<Hasher, token::jwt::JWT>)),
             )
             .service(scope("/api").wrap(jwt).service(playing::register_router()).service(upload::register_route("/upload")))
+            .service(eating::register("eatings"))
     })
     .bind((
         dotenv::var("ADDRESS").expect("ADDRESS environment not exists"),

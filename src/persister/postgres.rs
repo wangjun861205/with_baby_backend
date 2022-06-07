@@ -301,8 +301,13 @@ impl<T: Borrow<eating::Eating>> From<T> for Eating {
 }
 
 impl EatingPersister for PostgresPersister {
-    fn query_eating_by_distance(&self, query: eating::QueryByDistance) -> Result<Vec<eating::Eating>, Error> {
-        let results: Vec<(Eating, f64)> = eatings::table
+    fn query_eating_by_distance(&self, query: eating::QueryByDistance) -> Result<(Vec<eating::Eating>, i64), Error> {
+        let q = eatings::table.filter(sql(&format!(
+            "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(latitude, longitude)",
+            query.latitude, query.longitude, query.radius
+        )));
+        let total = q.clone().count().get_result(&self.conn)?;
+        let results: Vec<(Eating, f64)> = q
             .select((
                 eatings::all_columns,
                 sql(&format!(
@@ -310,25 +315,26 @@ impl EatingPersister for PostgresPersister {
                     query.latitude, query.longitude
                 )),
             ))
-            .filter(sql(&format!(
-                "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(latitude, longitude)",
-                query.latitude, query.longitude, query.radius
-            )))
             .order_by(sql::<Double>("disatnce"))
+            .limit(query.limit)
+            .offset(query.offset)
             .load(&self.conn)?;
-        Ok(results
-            .into_iter()
-            .map(|(e, d)| eating::Eating {
-                id: e.id,
-                name: e.name,
-                latitude: e.latitude,
-                longitude: e.longitude,
-                discoverer: e.discoverer,
-                create_on: e.create_on,
-                update_on: e.update_on,
-                distance: d,
-            })
-            .collect())
+        Ok((
+            results
+                .into_iter()
+                .map(|(e, d)| eating::Eating {
+                    id: e.id,
+                    name: e.name,
+                    latitude: e.latitude,
+                    longitude: e.longitude,
+                    discoverer: e.discoverer,
+                    create_on: e.create_on,
+                    update_on: e.update_on,
+                    distance: d,
+                })
+                .collect(),
+            total,
+        ))
     }
 
     fn insert_eating(&self, ins: eating::Insertion) -> Result<i32, Error> {
