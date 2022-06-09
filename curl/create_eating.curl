@@ -1,0 +1,4 @@
+url=http://localhost:8000/api/eatings/
+request=POST
+header=@headers
+data=@create_eating.json

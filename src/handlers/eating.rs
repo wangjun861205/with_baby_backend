@@ -7,13 +7,13 @@ use crate::persister::postgres::PostgresPersister;
 use crate::token::UID;
 use actix_web::{
     web::{get, post, Data, Json},
-    Scope,
+    Resource, Scope,
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 pub fn register(scope: &str) -> Scope {
-    Scope::new(scope).route("", get().to(nearby_eatings)).route("", post().to(create_eating))
+    Scope::new(scope).route("/", get().to(nearby_eatings)).route("/", post().to(create_eating))
 }
 
 #[derive(Debug, Deserialize)]

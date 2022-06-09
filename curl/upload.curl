@@ -1,4 +1,4 @@
 url=http://localhost:8000/api/upload
 request=POST
-form=file=@leetcode.jpeg
+form=file=@/home/wangjun/Downloads/images/leetcode.jpeg
 header=@headers

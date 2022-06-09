@@ -59,8 +59,13 @@ async fn main() -> std::io::Result<()> {
                     .route("/signup", web::post().to(handlers::user::signup::<Generator<ThreadRng>, Hasher>))
                     .route("/signin", web::post().to(handlers::user::signin::<Hasher, token::jwt::JWT>)),
             )
-            .service(scope("/api").wrap(jwt).service(playing::register_router()).service(upload::register_route("/upload")))
-            .service(eating::register("eatings"))
+            .service(
+                scope("/api")
+                    .wrap(jwt)
+                    .service(playing::register_router())
+                    .service(upload::register_route("/upload"))
+                    .service(eating::register("/eatings")),
+            )
     })
     .bind((
         dotenv::var("ADDRESS").expect("ADDRESS environment not exists"),
