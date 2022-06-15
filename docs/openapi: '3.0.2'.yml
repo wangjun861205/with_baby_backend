@@ -96,13 +96,6 @@ paths:
                 type: integer
                 description: 用户ID
 
-
-
-
-            
-            
-
-
   /api/playings:
     get:
       summary: 获取附近的游玩地点
