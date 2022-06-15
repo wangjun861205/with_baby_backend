@@ -1,0 +1,161 @@
+openapi: '3.0.2'
+info:
+  title: 带娃api
+  version: '1.0'
+servers:
+  - url: https://with_baby
+components:
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Login:
+      type: object
+      properties:
+        phone: 
+          type: string
+          description: 手机号
+        password:
+          type: string
+          description: 密码
+    Signup:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 用户名
+        phone:
+          type: string
+          description: 手机号
+        password:
+          type: string
+          description: 密码
+    BasePlaying:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 名称
+        latitude:
+          type: number
+          description: 纬度
+        longitude:
+          type: number
+          description: 经度
+    Playing:
+      allOf:
+        - $ref: '#/components/schemas/BasePlaying'
+        - type: object
+          properties:
+            discoverer:
+              type: number
+              description: 发现者
+    NearbyPlaying:
+      allOf:
+        - $ref: '#/components/schemas/BasePlaying'
+        - type: object
+          properties:
+            distance:
+              type: number
+              description: 与当前位置的距离, 单位为米
+
+paths:
+  /signin:
+    post:
+      summary: 登录
+      requestBody:
+        content:
+          appliation/json:
+            schema:
+              $ref: "#/components/schemas/Login"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: JWT Token
+
+  /signup:
+    post:
+      summary: 注册
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Signup"
+      responses:
+        "200":
+          description: 注册成功
+          content:
+            text/plain:
+              schema:
+                type: integer
+                description: 用户ID
+
+
+
+
+            
+            
+
+
+  /api/playings:
+    get:
+      summary: 获取附近的游玩地点
+      security:
+        - jwtAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: 页码
+        - in: query
+          name: size
+          schema: 
+            type: integer
+          description: 每页行数
+        - in: query
+          name: latitude
+          schema: 
+            type: number
+          description: 当前位置的纬度
+        - in: query
+          name: longitude
+          schema:
+            type: number
+          description: 当前位置的经度
+      responses:
+        '200':
+          description: "成功"
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: "#/components/schemas/NearbyPlaying"
+    post:
+      security:
+        - jwtAuth: []
+      summary: 创建游玩地点
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BasePlaying"
+      responses:
+        "200":
+          description: "成功"
+          content:
+            application/json:
+              schema:
+                type: integer
+                description: 所创建的游玩地点的id
+          
+              
+          
