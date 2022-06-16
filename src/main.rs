@@ -1,3 +1,4 @@
+mod dao;
 mod domain;
 mod generator;
 mod handlers;
