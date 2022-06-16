@@ -2,6 +2,7 @@ mod domain;
 mod generator;
 mod handlers;
 mod hasher;
+mod models;
 mod persister;
 mod response;
 mod schema;

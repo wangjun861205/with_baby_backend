@@ -11,7 +11,22 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    Login:
+    Base:
+      type: object
+      properties:
+        id:
+          type: integer
+          nullable: true
+          description: id
+        create_on:
+          type: string
+          nullable: true
+          description: 创建时间
+        update_on:
+          type: string
+          nullable: true
+          description: 更新时间
+    Signin:
       type: object
       properties:
         phone: 
@@ -32,34 +47,87 @@ components:
         password:
           type: string
           description: 密码
-    BasePlaying:
+    User:
       type: object
-      properties:
-        name:
-          type: string
-          description: 名称
-        latitude:
-          type: number
-          description: 纬度
-        longitude:
-          type: number
-          description: 经度
-    Playing:
       allOf:
-        - $ref: '#/components/schemas/BasePlaying'
-        - type: object
-          properties:
+        - $ref: "#/components/schemas/Base"
+        - properties:
+            name:
+              type: string
+              description: 名称
+            phone:
+              type: string
+              nullable: true
+              description: 电话
+            password:
+              type: string
+              nullable: true
+              description: 密码
+    Equipment:
+      type: object
+      description: 所需装备
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - properties:
+            name:
+              type: string
+              description: 名称
+            is_required:
+              type: boolean
+              description: 是否是必须的
+            usage:
+              type: string
+              description: 用途
+    Comment:
+      type: object
+      description: 评论
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - properties:
+            rank:
+              type: integer
+              description: 评分
+            content:
+              type: string
+              description: 内容
+            user:
+              nullable: true
+              $ref: "#/components/schemas/User"
+
+    Location:
+      type: object
+      description: 地点
+      allOf:
+        - $ref: "#/components/schemas/Base"
+        - properties:
+            name:
+              type: string
+              description: 名称
+            latitude:
+              type: number
+              description: 纬度
+            longitude: 
+              type: number
+              description: 经度
+            category:
+              type: integer
+              description: 类型
+            description:
+              type: string
+              description: 描述
             discoverer:
-              type: number
-              description: 发现者
-    NearbyPlaying:
-      allOf:
-        - $ref: '#/components/schemas/BasePlaying'
-        - type: object
-          properties:
+              $ref: "#/components/schemas/User"
             distance:
-              type: number
-              description: 与当前位置的距离, 单位为米
+              nullable: true
+              type:  number
+              description: 距离
+            equipments:
+              type: array
+              nullable: true
+              items:
+                $ref: "#/components/schemas/Equipment"
+
+
 
 paths:
   /signin:
@@ -69,7 +137,7 @@ paths:
         content:
           appliation/json:
             schema:
-              $ref: "#/components/schemas/Login"
+              $ref: "#/components/schemas/Signin"
       responses:
         "200":
           description: 登录成功
@@ -96,51 +164,70 @@ paths:
                 type: integer
                 description: 用户ID
 
-  /api/playings:
+  /api/locations:
     get:
-      summary: 获取附近的游玩地点
+      summary: 地点列表
       security:
         - jwtAuth: []
       parameters:
         - in: query
           name: page
+          required: true
           schema:
             type: integer
           description: 页码
         - in: query
           name: size
+          required: true
           schema: 
             type: integer
           description: 每页行数
         - in: query
           name: latitude
+          required: false
           schema: 
             type: number
           description: 当前位置的纬度
         - in: query
           name: longitude
+          required: false
           schema:
             type: number
           description: 当前位置的经度
+        - in: query
+          name: category
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: name
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: "成功"
           content:
             application/json:
               schema:
-                type: array
-                items: 
-                  $ref: "#/components/schemas/NearbyPlaying"
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Location"
+                  total:
+                    type: integer
     post:
       security:
         - jwtAuth: []
-      summary: 创建游玩地点
+      summary: 创建地点
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BasePlaying"
+              $ref: "#/components/schemas/Location"
       responses:
         "200":
           description: "成功"
@@ -148,7 +235,153 @@ paths:
             application/json:
               schema:
                 type: integer
-                description: 所创建的游玩地点的id
+                description: 所创建的地点的id
+
+  /api/locations/{id}:
+    get:
+      summary: "地点详情"
+      security:
+        - jwtAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: "成功"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+    put:
+      summary: "更新地点"
+      security:
+        - jwtAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: 成功
+  
+  /api/locations/{id}/comments:
+    summary: 评论
+    get:
+      summary: 地点评论列表
+      security:
+        - jwtAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          required: true
+          description: 页码
+        - in: query
+          name: size
+          schema:
+            type: integer
+          required: true
+          description: 每页数量
+        - in: query
+          name: sort_by
+          schema:
+            type: string
+            enum:
+              - rank
+              - create_on
+      responses:
+        "200":
+          description: 成功
+          content:
+            appliation/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Comment"
+                  total:
+                    type: integer
+    post:
+      summary: 创建评论
+      security:
+        - jwtAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#components/schemas/Comment"
+      responses:  
+        "200":
+          description: 成功
+          content:
+            appliation/json:
+              schema:
+                type: integer
+                description: 所创建的评论的id
+
+  /api/locations/{location_id}/comments/{comment_id}:
+    get:
+      summary: 评论详情
+      security:
+        - jwtAuth: []
+      parameters:
+        - in: path
+          name: location_id
+          schema:
+            type: integer
+          required: true
+          description: 地点id
+        - in: path
+          name: comment_id
+          schema:
+            type: integer
+          required: true
+          description: 评论id
+      responses:
+        "200":
+          description: 成功
+          content:
+            appliation/json:
+              schema:
+                $ref: "#components/schemas/Comment"
+    put:
+      summary: 修改评论
+      security:
+        - jwtAuth: []
+      parameters:
+        - in: path
+          name: location_id
+          schema:
+            type: integer
+          required: true
+          description: 地点id
+        - in: path
+          name: comment_id
+          schema:
+            type: integer
+          required: true
+          description: 评论id
+      responses:
+        "204":
+          description: 成功
+              
+
+
+
+
+
           
+
+            
+
+
               
           

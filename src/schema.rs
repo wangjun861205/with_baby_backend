@@ -1,4 +1,16 @@
 table! {
+    comments (id) {
+        id -> Int4,
+        rank -> Int4,
+        content -> Text,
+        user -> Int4,
+        location -> Int4,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
+    }
+}
+
+table! {
     eatings (id) {
         id -> Int4,
         name -> Varchar,
@@ -15,6 +27,32 @@ table! {
         id -> Int4,
         eating_id -> Int4,
         upload_id -> Int4,
+    }
+}
+
+table! {
+    equipments (id) {
+        id -> Int4,
+        name -> Varchar,
+        is_required -> Bool,
+        usage -> Text,
+        location -> Int4,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
+    }
+}
+
+table! {
+    locations (id) {
+        id -> Int4,
+        name -> Varchar,
+        latitude -> Float8,
+        longitude -> Float8,
+        category -> Int4,
+        description -> Text,
+        discoverer -> Int4,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
     }
 }
 
@@ -60,17 +98,24 @@ table! {
     }
 }
 
+joinable!(comments -> locations (location));
+joinable!(comments -> users (user));
 joinable!(eatings -> users (discoverer));
 joinable!(eatings_uploads -> eatings (eating_id));
 joinable!(eatings_uploads -> uploads (upload_id));
+joinable!(equipments -> locations (location));
+joinable!(locations -> users (discoverer));
 joinable!(playings -> users (discoverer));
 joinable!(playings_uploads -> playings (playing_id));
 joinable!(playings_uploads -> uploads (upload_id));
 joinable!(uploads -> users (owner));
 
 allow_tables_to_appear_in_same_query!(
+    comments,
     eatings,
     eatings_uploads,
+    equipments,
+    locations,
     playings,
     playings_uploads,
     uploads,
