@@ -12,6 +12,7 @@ mod token;
 
 #[macro_use]
 extern crate diesel;
+extern crate actix_web;
 extern crate serde;
 use actix_web::{
     middleware::Logger,
@@ -25,7 +26,7 @@ use diesel::{
 };
 use env_logger;
 use generator::random::Generator;
-use handlers::{eating, playing, upload};
+use handlers::{eating, location, playing, upload};
 use hasher::sha::Hasher;
 use rand::{rngs::ThreadRng, thread_rng};
 use token::jwt::JWT;
@@ -66,7 +67,8 @@ async fn main() -> std::io::Result<()> {
                     .wrap(jwt)
                     .service(playing::register_router())
                     .service(upload::register_route("/upload"))
-                    .service(eating::register("/eatings")),
+                    .service(eating::register("/eatings"))
+                    .service(location::register("/locations")),
             )
     })
     .bind((

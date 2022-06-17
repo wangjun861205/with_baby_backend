@@ -1,19 +1,18 @@
 use crate::schema::*;
 use chrono::NaiveDateTime;
-use diesel::sql_types::Double;
-use diesel::{AsChangeset, Identifiable, Insertable, Queryable, QueryableByName};
+use diesel::{AsChangeset, Associations, BelongingToDsl, Identifiable, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Insertable)]
 #[table_name = "users"]
 pub struct User {
-    id: i32,
-    name: String,
-    phone: String,
-    password: String,
-    salt: String,
-    create_on: NaiveDateTime,
-    update_on: NaiveDateTime,
+    pub id: i32,
+    pub name: String,
+    pub phone: String,
+    pub password: String,
+    pub salt: String,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Insertable)]
@@ -51,7 +50,7 @@ pub struct LocationInsertion {
     pub discoverer: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Clone)]
 #[table_name = "locations"]
 pub struct Location {
     pub id: i32,
@@ -63,4 +62,22 @@ pub struct Location {
     pub discoverer: i32,
     pub create_on: NaiveDateTime,
     pub update_on: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Queryable)]
+pub struct Upload {
+    pub id: i32,
+    pub fetch_code: String,
+    pub owner: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Associations, Identifiable)]
+#[belongs_to(Location)]
+#[belongs_to(Upload)]
+pub struct LocationUploadRel {
+    pub id: i32,
+    pub location_id: i32,
+    pub upload_id: i32,
 }

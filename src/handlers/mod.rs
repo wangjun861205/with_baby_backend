@@ -1,4 +1,6 @@
 pub mod eating;
+pub mod location;
+pub mod models;
 pub mod playing;
 pub mod upload;
 pub mod user;

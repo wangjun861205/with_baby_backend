@@ -43,6 +43,14 @@ table! {
 }
 
 table! {
+    location_upload_rels (id) {
+        id -> Int4,
+        location_id -> Int4,
+        upload_id -> Int4,
+    }
+}
+
+table! {
     locations (id) {
         id -> Int4,
         name -> Varchar,
@@ -104,6 +112,8 @@ joinable!(eatings -> users (discoverer));
 joinable!(eatings_uploads -> eatings (eating_id));
 joinable!(eatings_uploads -> uploads (upload_id));
 joinable!(equipments -> locations (location));
+joinable!(location_upload_rels -> locations (location_id));
+joinable!(location_upload_rels -> uploads (upload_id));
 joinable!(locations -> users (discoverer));
 joinable!(playings -> users (discoverer));
 joinable!(playings_uploads -> playings (playing_id));
@@ -115,6 +125,7 @@ allow_tables_to_appear_in_same_query!(
     eatings,
     eatings_uploads,
     equipments,
+    location_upload_rels,
     locations,
     playings,
     playings_uploads,
