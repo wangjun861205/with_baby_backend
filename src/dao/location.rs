@@ -73,8 +73,20 @@ where
     Ok((l.into_iter().zip(images).map(|((l, u, d), imgs)| (l, u, d, imgs)).collect(), total))
 }
 
-pub fn get(conn: &PgConnection, id: i32) -> Result<Location, Error> {
-    locations::table.filter(locations::id.eq(id)).get_result(conn).context("failed to get location")
+pub fn get<T>(conn: &T, id: i32, latitude: f64, longitude: f64) -> Result<(Location, User, f64), Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    locations::table
+        .inner_join(users::table)
+        .select((
+            locations::all_columns,
+            users::all_columns,
+            sql::<Double>(&format!("earth_distance(ll_to_earth({}, {}), ll_to_earth(latitude, longitude))", latitude, longitude)),
+        ))
+        .filter(locations::id.eq(id))
+        .get_result(conn)
+        .context("failed to get location")
 }
 
 pub fn insert(conn: &PgConnection, loc: LocationInsertion) -> Result<i32, Error> {

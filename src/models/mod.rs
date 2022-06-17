@@ -27,16 +27,25 @@ pub struct Equipment {
     update_on: Option<NaiveDateTime>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Insertable)]
+#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName)]
 #[table_name = "comments"]
 pub struct Comment {
-    id: Option<i32>,
-    rank: Option<i32>,
-    content: Option<String>,
-    user: Option<i32>,
-    location: Option<i32>,
-    create_on: Option<NaiveDateTime>,
-    update_on: Option<NaiveDateTime>,
+    id: i32,
+    rank: i32,
+    content: String,
+    user: i32,
+    location: i32,
+    create_on: NaiveDateTime,
+    update_on: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Insertable, Queryable, QueryableByName, AsChangeset)]
+#[table_name = "comments"]
+pub struct CommentCommand {
+    rank: i32,
+    content: String,
+    user: i32,
+    location: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Insertable, AsChangeset)]
