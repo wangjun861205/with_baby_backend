@@ -90,16 +90,5 @@ pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<Crea
 
 pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query((latitude, longitude)): Query<(f64, f64)>) -> Result<Json<Location>, Error> {
     let conn = pool.get().context("failed to get location detail")?;
-    let (loc, user, distance) = location::get(&conn, id.0, latitude, longitude).context("failed to get location detail")?;
-    let (images, _) = upload::find(
-        &conn,
-        upload::Query {
-            location: Some(loc.id),
-            limit: 10,
-            offset: 0,
-            ..Default::default()
-        },
-    )
-    .context("failed to get location detail")?;
-    Ok(Json((loc, user, distance, images).into()))
+    Ok(Json(location::get(&conn, id.0, latitude, longitude).context("failed to get location detail")?.into()))
 }

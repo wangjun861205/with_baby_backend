@@ -90,3 +90,45 @@ pub struct LocationUploadRel {
     pub location_id: i32,
     pub upload_id: i32,
 }
+
+#[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName, Identifiable)]
+#[table_name = "memories"]
+pub struct Memory {
+    pub id: i32,
+    pub title: String,
+    pub content: String,
+    pub owner: i32,
+    pub location: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Insertable, AsChangeset)]
+#[table_name = "memories"]
+pub struct MemoryCommand {
+    pub title: String,
+    pub content: String,
+    pub owner: i32,
+    pub location: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MemoryQuery {
+    pub title: Option<String>,
+    pub owner: Option<i32>,
+    pub location: Option<i32>,
+    pub create_before: Option<NaiveDateTime>,
+    pub create_after: Option<NaiveDateTime>,
+    pub limit: i64,
+    pub offset: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName, Associations, Identifiable)]
+#[table_name = "memory_upload_rels"]
+#[belongs_to(Memory, foreign_key = "memory")]
+#[belongs_to(Upload, foreign_key = "upload")]
+pub struct MemoryUploadRel {
+    pub id: i32,
+    pub memory: i32,
+    pub upload: i32,
+}

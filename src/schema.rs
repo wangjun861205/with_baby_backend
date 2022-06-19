@@ -65,6 +65,26 @@ table! {
 }
 
 table! {
+    memories (id) {
+        id -> Int4,
+        title -> Varchar,
+        content -> Text,
+        owner -> Int4,
+        location -> Int4,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
+    }
+}
+
+table! {
+    memory_upload_rels (id) {
+        id -> Int4,
+        memory -> Int4,
+        upload -> Int4,
+    }
+}
+
+table! {
     playings (id) {
         id -> Int4,
         name -> Varchar,
@@ -115,6 +135,10 @@ joinable!(equipments -> locations (location));
 joinable!(location_upload_rels -> locations (location_id));
 joinable!(location_upload_rels -> uploads (upload_id));
 joinable!(locations -> users (discoverer));
+joinable!(memories -> locations (location));
+joinable!(memories -> users (owner));
+joinable!(memory_upload_rels -> memories (memory));
+joinable!(memory_upload_rels -> uploads (upload));
 joinable!(playings -> users (discoverer));
 joinable!(playings_uploads -> playings (playing_id));
 joinable!(playings_uploads -> uploads (upload_id));
@@ -127,6 +151,8 @@ allow_tables_to_appear_in_same_query!(
     equipments,
     location_upload_rels,
     locations,
+    memories,
+    memory_upload_rels,
     playings,
     playings_uploads,
     uploads,

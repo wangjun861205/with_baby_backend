@@ -73,11 +73,11 @@ where
     Ok((l.into_iter().zip(images).map(|((l, u, d), imgs)| (l, u, d, imgs)).collect(), total))
 }
 
-pub fn get<T>(conn: &T, id: i32, latitude: f64, longitude: f64) -> Result<(Location, User, f64), Error>
+pub fn get<T>(conn: &T, id: i32, latitude: f64, longitude: f64) -> Result<(Location, User, f64, Vec<Upload>), Error>
 where
     T: Connection<Backend = Pg>,
 {
-    locations::table
+    let (loc, user, dist) = locations::table
         .inner_join(users::table)
         .select((
             locations::all_columns,
@@ -85,8 +85,14 @@ where
             sql::<Double>(&format!("earth_distance(ll_to_earth({}, {}), ll_to_earth(latitude, longitude))", latitude, longitude)),
         ))
         .filter(locations::id.eq(id))
-        .get_result(conn)
-        .context("failed to get location")
+        .get_result::<(Location, User, f64)>(conn)
+        .context("failed to get location")?;
+    let images = LocationUploadRel::belonging_to(&loc)
+        .inner_join(uploads::table)
+        .select(uploads::all_columns)
+        .load(conn)
+        .context("failed to get location")?;
+    Ok((loc, user, dist, images))
 }
 
 pub fn insert(conn: &PgConnection, loc: LocationInsertion) -> Result<i32, Error> {
