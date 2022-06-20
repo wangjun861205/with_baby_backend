@@ -51,7 +51,7 @@ where
     IS: Stream<Item = Result<Bytes, Error>> + Unpin,
 {
     let (mut sink, fetch_code) = storer.store()?;
-    for bs in stream.next().await {
+    while let Some(bs) = stream.next().await {
         match bs {
             Ok(b) => {
                 sink.send(b).await.context("failed to upload")?;
