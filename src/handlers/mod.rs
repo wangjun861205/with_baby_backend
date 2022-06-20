@@ -9,7 +9,7 @@ use anyhow;
 use thiserror;
 
 use crate::domain::user::{PasswordHasher, SaltGenerator};
-use actix_web::ResponseError;
+use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},

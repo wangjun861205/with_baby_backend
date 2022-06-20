@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::domain::eating::Eating;
 use anyhow::{Context, Error};
 use bytes::Bytes;
