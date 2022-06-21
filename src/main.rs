@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
             ),
         );
         App::new()
-            .wrap(Logger::new("%a %{User-Agent}i"))
+            .wrap(Logger::new("%a %{User-Agent}i %r"))
             .app_data(Data::new(Generator::new(thread_rng())))
             .app_data(Data::new(Hasher::new()))
             .app_data(Data::new(pool))
@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 scope("/api")
-                    .wrap(jwt)
+                    // .wrap(jwt)
                     .service(playing::register_router())
                     .service(upload::register_route("/upload"))
                     .service(eating::register("/eatings"))

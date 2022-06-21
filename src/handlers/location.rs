@@ -17,7 +17,7 @@ use diesel::Connection;
 use std::default::Default;
 
 pub fn register(scope: &str) -> Scope {
-    Scope::new(scope).route("/", get().to(nearby_locations)).route("/", post().to(create_location))
+    Scope::new(scope).route("", get().to(nearby_locations)).route("", post().to(create_location))
 }
 
 #[derive(Debug, Deserialize)]

@@ -11,6 +11,8 @@ use std::{
     task::{Context, Poll},
 };
 
+use infer::get_from_path;
+use std::path;
 use uuid::Uuid;
 
 pub struct AsyncFile {
@@ -79,5 +81,13 @@ impl UploadStorer<AsyncFile, AsyncFile> for LocalStore {
     fn get(&self, fetch_code: &str) -> Result<AsyncFile, Error> {
         let file = File::open(format!("/tmp/{}", fetch_code))?;
         Ok(AsyncFile::new(file))
+    }
+
+    fn mime(&self, fetch_code: &str) -> Result<String, Error> {
+        let mime = get_from_path(path::Path::new("/tmp").join(fetch_code))?;
+        if let Some(t) = mime {
+            return Ok(t.to_string());
+        }
+        Ok("".into())
     }
 }

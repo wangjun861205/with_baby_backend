@@ -33,6 +33,6 @@ pub async fn upload(uid: UID, mut multi: Multipart, pool: Data<PgPool>) -> Resul
 pub async fn fetch(id: Path<(i32,)>, pool: Data<PgPool>) -> Result<HttpResponse, Error> {
     let persister = PostgresPersister::new(pool.get().map_err(|e| anyhow::Error::from(e))?);
     let storer = LocalStore::new();
-    let stream = upload::get(id.0, persister, storer).await?;
-    Ok(HttpResponse::Ok().body(BodyStream::new(stream)))
+    let (stream, mime) = upload::get(id.0, persister, storer).await?;
+    Ok(HttpResponse::Ok().content_type(mime).body(BodyStream::new(stream)))
 }

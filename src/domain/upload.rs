@@ -13,6 +13,7 @@ static WRITE_BUFFER_SIZE: usize = 1024;
 pub trait UploadStorer<SM: Stream, SK: Sink<Bytes>> {
     fn store(&self) -> Result<(SK, String), Error>;
     fn get(&self, fetch_code: &str) -> Result<SM, Error>;
+    fn mime(&self, fetch_code: &str) -> Result<String, Error>;
 }
 
 #[derive(Debug, Serialize)]
@@ -62,7 +63,7 @@ where
     persister.insert_upload(Insertion { fetch_code: fetch_code, owner: uid }).context("failed to update")
 }
 
-pub async fn get<S, SM, P, SK>(id: i32, persister: P, storer: S) -> Result<SM, Error>
+pub async fn get<S, SM, P, SK>(id: i32, persister: P, storer: S) -> Result<(SM, String), Error>
 where
     SM: Stream,
     P: UploadPersister,
@@ -70,5 +71,7 @@ where
     SK: Sink<Bytes, Error = Error>,
 {
     let u = persister.get_upload(id).context("failed to get uploaded file")?;
-    storer.get(&u.fetch_code).context("failed to get uploaded file")
+    let mime = storer.mime(&u.fetch_code).context("failed to get uploaded file")?;
+    let sm = storer.get(&u.fetch_code).context("failed to get uploaded file")?;
+    Ok((sm, mime))
 }

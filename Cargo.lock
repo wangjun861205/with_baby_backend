@@ -353,6 +353,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cfb"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "466bc70ba95e7ad3322ce4c69a2bc22635a0f9535c1ffb7174bc28c286764517"
+dependencies = [
+ "byteorder",
+ "fnv",
+ "uuid",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -725,6 +736,15 @@ checksum = "0f647032dfaa1f8b6dc29bd3edb7bbef4861b8b8007ebb118d6db284fd59f6ee"
 dependencies = [
  "autocfg",
  "hashbrown",
+]
+
+[[package]]
+name = "infer"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e035cede526e0b21d5adffc9fa0eb4ef5d6026fe9c5b0bfe8084b9472b587a55"
+dependencies = [
+ "cfb",
 ]
 
 [[package]]
@@ -1676,6 +1696,7 @@ dependencies = [
  "futures",
  "futures-util",
  "hex",
+ "infer",
  "jsonwebtoken",
  "r2d2",
  "rand",
