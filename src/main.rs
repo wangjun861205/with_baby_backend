@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(
                 scope("/api")
-                    // .wrap(jwt)
+                    .wrap(jwt)
                     .service(playing::register_router())
                     .service(upload::register_route("/upload"))
                     .service(eating::register("/eatings"))
