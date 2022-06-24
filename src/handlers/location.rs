@@ -6,7 +6,7 @@ use crate::serde::Deserialize;
 use crate::token::UID;
 use crate::{
     dao::{location, upload},
-    models::LocationInsertion,
+    models::{LocationInsertion, LocationUpdating},
 };
 use actix_web::{
     web::{get, post, Data, Json, Path, Query},
@@ -17,7 +17,10 @@ use diesel::Connection;
 use std::default::Default;
 
 pub fn register(scope: &str) -> Scope {
-    Scope::new(scope).route("", get().to(nearby_locations)).route("", post().to(create_location))
+    Scope::new(scope)
+        .route("", get().to(nearby_locations))
+        .route("", post().to(create_location))
+        .route("/{id}", get().to(detail))
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,7 +91,41 @@ pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<Crea
     Ok(Json(id))
 }
 
-pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query((latitude, longitude)): Query<(f64, f64)>) -> Result<Json<Location>, Error> {
+#[derive(Debug, Deserialize)]
+pub struct DetailParams {
+    latitude: f64,
+    longitude: f64,
+}
+
+pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query(DetailParams { latitude, longitude }): Query<DetailParams>) -> Result<Json<Location>, Error> {
     let conn = pool.get().context("failed to get location detail")?;
     Ok(Json(location::get(&conn, id.0, latitude, longitude).context("failed to get location detail")?.into()))
+}
+
+pub struct UpdateBody {
+    name: String,
+    description: String,
+    category: i32,
+    images: Vec<i32>,
+}
+
+pub async fn update(pool: Data<PgPool>, uid: UID, id: Path<(i32,)>, Json(body): Json<UpdateBody>) -> Result<Json<usize>, Error> {
+    let conn = pool.get()?;
+    let (loc, user, _) = location::get_without_coord(&conn, id.0)?;
+    if user.id != uid.0 {
+        return Err(Error::BusinessError("no permission".into()));
+    }
+    let effected = location::update(
+        &conn,
+        id.0,
+        LocationUpdating {
+            name: body.name,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            category: body.category,
+            description: body.description,
+            discoverer: user.id,
+        },
+    )?;
+    Ok(Json(effected))
 }

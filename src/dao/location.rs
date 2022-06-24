@@ -1,5 +1,5 @@
 use crate::domain::upload;
-use crate::models::{Location, LocationInsertion, LocationUploadRel, Upload, User};
+use crate::models::{Location, LocationInsertion, LocationUpdating, LocationUploadRel, Upload, User};
 use crate::schema::*;
 use crate::serde::{Deserialize, Serialize};
 use anyhow::{Context, Error};
@@ -95,13 +95,31 @@ where
     Ok((loc, user, dist, images))
 }
 
+pub fn get_without_coord<T>(conn: &T, id: i32) -> Result<(Location, User, Vec<Upload>), Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    let (loc, user) = locations::table
+        .inner_join(users::table)
+        .select((locations::all_columns, users::all_columns))
+        .filter(locations::id.eq(id))
+        .get_result::<(Location, User)>(conn)
+        .context("failed to get location")?;
+    let images = LocationUploadRel::belonging_to(&loc)
+        .inner_join(uploads::table)
+        .select(uploads::all_columns)
+        .load(conn)
+        .context("failed to get location")?;
+    Ok((loc, user, images))
+}
+
 pub fn insert(conn: &PgConnection, loc: LocationInsertion) -> Result<i32, Error> {
     insert_into(locations::table).values(loc).returning(locations::id).get_result(conn).context("failed to insert location")
 }
 
-pub fn update(conn: &PgConnection, loc: Location) -> Result<usize, Error> {
+pub fn update(conn: &PgConnection, id: i32, loc: LocationUpdating) -> Result<usize, Error> {
     diesel::update(locations::table)
-        .filter(locations::id.eq(loc.id))
+        .filter(locations::id.eq(id))
         .set(loc)
         .execute(conn)
         .context("failed to update location")

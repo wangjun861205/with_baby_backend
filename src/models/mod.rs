@@ -73,6 +73,17 @@ pub struct Location {
     pub update_on: NaiveDateTime,
 }
 
+#[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName, AsChangeset, Clone)]
+#[table_name = "locations"]
+pub struct LocationUpdating {
+    pub name: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub category: i32,
+    pub description: String,
+    pub discoverer: i32,
+}
+
 #[derive(Debug, Serialize, Queryable)]
 pub struct Upload {
     pub id: i32,

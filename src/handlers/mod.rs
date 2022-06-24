@@ -26,6 +26,7 @@ pub static JWT_TOKEN: &str = "JWT_TOKEN";
 pub enum Error {
     AnyhowError(#[from] anyhow::Error),
     R2D2Error(#[from] r2d2::Error),
+    BusinessError(String),
 }
 
 impl ResponseError for Error {}
