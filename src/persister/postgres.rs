@@ -227,11 +227,6 @@ pub struct EatingsUpload {
     upload_id: i32,
 }
 
-pub struct EatingUploadsInsertion {
-    eating_id: i32,
-    upload_ids: Vec<i32>,
-}
-
 impl UploadPersister for PostgresPersister {
     fn insert_upload(&self, ins: Insertion) -> Result<i32, Error> {
         let id = diesel::insert_into(uploads::table)

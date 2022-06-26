@@ -26,7 +26,7 @@ use diesel::{
 };
 use env_logger;
 use generator::random::Generator;
-use handlers::{eating, location, playing, upload};
+use handlers::{eating, location, memory, playing, upload};
 use hasher::sha::Hasher;
 use rand::{rngs::ThreadRng, thread_rng};
 use token::jwt::JWT;
@@ -68,7 +68,7 @@ async fn main() -> std::io::Result<()> {
                     .service(playing::register_router())
                     .service(upload::register_route("/upload"))
                     .service(eating::register("/eatings"))
-                    .service(location::register("/locations")),
+                    .service(memory::register(location::register("/locations"))),
             )
     })
     .bind((

@@ -9,7 +9,7 @@ use crate::{
     models::{LocationInsertion, LocationUpdating},
 };
 use actix_web::{
-    web::{get, post, Data, Json, Path, Query},
+    web::{get, post, put, Data, Json, Path, Query},
     Scope,
 };
 use anyhow::Context;
@@ -21,6 +21,7 @@ pub fn register(scope: &str) -> Scope {
         .route("", get().to(nearby_locations))
         .route("", post().to(create_location))
         .route("/{id}", get().to(detail))
+        .route("/{id}", put().to(update))
 }
 
 #[derive(Debug, Deserialize)]
@@ -102,6 +103,7 @@ pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query(DetailParams { l
     Ok(Json(location::get(&conn, id.0, latitude, longitude).context("failed to get location detail")?.into()))
 }
 
+#[derive(Debug, Deserialize)]
 pub struct UpdateBody {
     name: String,
     description: String,
@@ -113,19 +115,24 @@ pub async fn update(pool: Data<PgPool>, uid: UID, id: Path<(i32,)>, Json(body): 
     let conn = pool.get()?;
     let (loc, user, _) = location::get_without_coord(&conn, id.0)?;
     if user.id != uid.0 {
-        return Err(Error::BusinessError("no permission".into()));
+        return Err(Error::PermissionError);
     }
-    let effected = location::update(
-        &conn,
-        id.0,
-        LocationUpdating {
-            name: body.name,
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            category: body.category,
-            description: body.description,
-            discoverer: user.id,
-        },
-    )?;
-    Ok(Json(effected))
+    conn.transaction::<(), anyhow::Error, _>(|| {
+        location::update(
+            &conn,
+            id.0,
+            LocationUpdating {
+                name: body.name,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                category: body.category,
+                description: body.description,
+                discoverer: user.id,
+            },
+        )?;
+        location::clear_images(&conn, id.0)?;
+        location::add_images(&conn, id.0, body.images)?;
+        Ok(())
+    })?;
+    Ok(Json(1))
 }

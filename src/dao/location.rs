@@ -1,9 +1,10 @@
 use crate::domain::upload;
-use crate::models::{Location, LocationInsertion, LocationUpdating, LocationUploadRel, Upload, User};
+use crate::models::{Location, LocationInsertion, LocationUpdating, LocationUploadRel, LocationWithDistance, Upload, User};
 use crate::schema::*;
 use crate::serde::{Deserialize, Serialize};
 use anyhow::{Context, Error};
 use diesel::{
+    delete,
     dsl::{self, sql},
     insert_into,
     pg::{Pg, PgConnection},
@@ -20,6 +21,12 @@ pub struct Query {
     pub category: Option<i32>,
     pub limit: i64,
     pub offset: i64,
+}
+
+pub fn query<T>(conn: &T, query: Query) -> Result<(Vec<LocationWithDistance>, i64), Error>
+where
+    T: Connection<Backend = Pg>,
+{
 }
 
 pub fn find<T>(conn: &T, query: Query) -> Result<(Vec<(Location, User, f64, Vec<Upload>)>, i64), Error>
@@ -123,6 +130,25 @@ pub fn update(conn: &PgConnection, id: i32, loc: LocationUpdating) -> Result<usi
         .set(loc)
         .execute(conn)
         .context("failed to update location")
+}
+
+pub fn clear_images(conn: &PgConnection, id: i32) -> Result<usize, Error> {
+    delete(location_upload_rels::table)
+        .filter(location_upload_rels::location_id.eq(id))
+        .execute(conn)
+        .context("failed to clear images of loacation")
+}
+
+pub fn add_images(conn: &PgConnection, id: i32, images: Vec<i32>) -> Result<usize, Error> {
+    insert_into(location_upload_rels::table)
+        .values(
+            images
+                .into_iter()
+                .map(|img_id| (location_upload_rels::location_id.eq(id), location_upload_rels::upload_id.eq(img_id)))
+                .collect::<Vec<_>>(),
+        )
+        .execute(conn)
+        .context("failed to add images for location")
 }
 
 pub fn exists<T>(conn: &T, query: Query) -> Result<bool, Error>

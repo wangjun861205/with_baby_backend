@@ -1,6 +1,6 @@
 use crate::schema::*;
 use chrono::NaiveDateTime;
-use diesel::{AsChangeset, Associations, BelongingToDsl, Identifiable, Insertable, Queryable, QueryableByName};
+use diesel::{sql_types::Decimal, AsChangeset, Associations, Identifiable, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Insertable)]
@@ -13,18 +13,6 @@ pub struct User {
     pub salt: String,
     pub create_on: NaiveDateTime,
     pub update_on: NaiveDateTime,
-}
-
-#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Insertable)]
-#[table_name = "equipments"]
-pub struct Equipment {
-    id: Option<i32>,
-    name: Option<String>,
-    is_required: Option<bool>,
-    usage: Option<String>,
-    location: Option<i32>,
-    create_on: Option<NaiveDateTime>,
-    update_on: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName)]
@@ -73,7 +61,23 @@ pub struct Location {
     pub update_on: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName, AsChangeset, Clone)]
+#[derive(Debug, Serialize, Deserialize, Identifiable, QueryableByName, Clone)]
+#[table_name = "locations"]
+pub struct LocationWithDistance {
+    pub id: i32,
+    pub name: String,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub category: i32,
+    pub description: String,
+    pub discoverer: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
+    #[sql_type = "Decimal"]
+    pub distance: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, AsChangeset, Clone)]
 #[table_name = "locations"]
 pub struct LocationUpdating {
     pub name: String,
@@ -142,4 +146,26 @@ pub struct MemoryUploadRel {
     pub id: i32,
     pub memory: i32,
     pub upload: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, Associations)]
+#[table_name = "equipments"]
+#[belongs_to(Location, foreign_key = "location")]
+pub struct Equipment {
+    pub id: i32,
+    pub name: String,
+    pub is_required: bool,
+    pub usage: String,
+    pub location: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, AsChangeset, Insertable)]
+#[table_name = "equipments"]
+pub struct EquipmentCommand {
+    name: String,
+    is_required: bool,
+    usage: String,
+    location: i32,
 }

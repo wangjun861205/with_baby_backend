@@ -1,6 +1,6 @@
 use crate::models;
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Debug, Serialize, Queryable)]
 pub struct Upload {
@@ -36,6 +36,31 @@ impl From<models::User> for User {
 }
 
 #[derive(Debug, Serialize)]
+pub struct Equipment {
+    pub id: i32,
+    pub name: String,
+    pub is_required: bool,
+    pub usage: String,
+    pub location: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
+}
+
+impl From<models::Equipment> for Equipment {
+    fn from(equip: models::Equipment) -> Self {
+        Self {
+            id: equip.id,
+            name: equip.name,
+            is_required: equip.is_required,
+            usage: equip.usage,
+            location: equip.location,
+            create_on: equip.create_on,
+            update_on: equip.update_on,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 pub struct Location {
     pub id: i32,
     pub name: String,
@@ -48,10 +73,11 @@ pub struct Location {
     pub update_on: NaiveDateTime,
     pub distance: f64,
     pub images: Vec<Upload>,
+    pub equipments: Vec<Equipment>,
 }
 
-impl From<(models::Location, models::User, f64, Vec<models::Upload>)> for Location {
-    fn from((l, u, d, ims): (models::Location, models::User, f64, Vec<models::Upload>)) -> Self {
+impl From<(models::Location, models::User, f64, Vec<models::Upload>, Vec<models::Equipment>)> for Location {
+    fn from((l, u, d, ims, eqps): (models::Location, models::User, f64, Vec<models::Upload>, Vec<models::Equipment>)) -> Self {
         Self {
             id: l.id,
             name: l.name,
@@ -64,6 +90,7 @@ impl From<(models::Location, models::User, f64, Vec<models::Upload>)> for Locati
             update_on: l.update_on,
             distance: d,
             images: ims.into_iter().map(|im| im.into()).collect(),
+            equipments: eqps.into_iter().map(|v| v.into()).collect(),
         }
     }
 }

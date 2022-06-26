@@ -1,5 +1,6 @@
 pub mod eating;
 pub mod location;
+pub mod memory;
 pub mod models;
 pub mod playing;
 pub mod upload;
@@ -9,7 +10,7 @@ use anyhow;
 use thiserror;
 
 use crate::domain::user::{PasswordHasher, SaltGenerator};
-use actix_web::{http::StatusCode, HttpResponse, ResponseError};
+use actix_web::ResponseError;
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
@@ -26,7 +27,8 @@ pub static JWT_TOKEN: &str = "JWT_TOKEN";
 pub enum Error {
     AnyhowError(#[from] anyhow::Error),
     R2D2Error(#[from] r2d2::Error),
-    BusinessError(String),
+    #[error("no permission")]
+    PermissionError,
 }
 
 impl ResponseError for Error {}

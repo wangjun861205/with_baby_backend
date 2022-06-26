@@ -1,9 +1,9 @@
 use crate::models::{Memory, MemoryCommand, MemoryQuery, MemoryUploadRel, Upload};
 use crate::schema::*;
 use anyhow::{Context, Error};
-use diesel::{self, insert_into, pg::Pg, BelongingToDsl, Connection, ExpressionMethods, GroupedBy, QueryDsl, RunQueryDsl, TextExpressionMethods};
+use diesel::{self, delete, insert_into, pg::Pg, BelongingToDsl, Connection, ExpressionMethods, GroupedBy, QueryDsl, RunQueryDsl, TextExpressionMethods};
 
-pub fn find<T>(conn: &T, query: MemoryQuery) -> Result<(Vec<(Memory, Vec<Upload>)>, i64), Error>
+pub fn find<T>(conn: &T, query: MemoryQuery) -> Result<(Vec<Memory>, i64), Error>
 where
     T: Connection<Backend = Pg>,
 {
@@ -31,15 +31,7 @@ where
     }
     let total = c.count().get_result(conn).context("failed to find memory")?;
     let ms: Vec<Memory> = q.load(conn)?;
-    let images: Vec<Vec<Upload>> = MemoryUploadRel::belonging_to(&ms)
-        .inner_join(uploads::table)
-        .select((memory_upload_rels::all_columns, uploads::all_columns))
-        .load::<(MemoryUploadRel, Upload)>(conn)?
-        .grouped_by(&ms)
-        .into_iter()
-        .map(|l| l.into_iter().map(|(_, u)| u).collect())
-        .collect();
-    Ok((ms.into_iter().zip(images).collect(), total))
+    Ok((ms, total))
 }
 
 pub fn insert<T>(conn: &T, ins: MemoryCommand) -> Result<i32, Error>
@@ -54,4 +46,37 @@ where
     T: Connection<Backend = Pg>,
 {
     diesel::update(memories::table).filter(memories::id.eq(id)).set(upd).execute(conn).context("failed to update memory")
+}
+
+pub fn clear_images<T>(conn: &T, id: i32) -> Result<usize, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    delete(memory_upload_rels::table)
+        .filter(memory_upload_rels::memory.eq(id))
+        .execute(conn)
+        .context("failed to clear images of memory")
+}
+
+pub fn add_images<T>(conn: &T, id: i32, images: Vec<i32>) -> Result<usize, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    insert_into(memory_upload_rels::table)
+        .values(
+            images
+                .into_iter()
+                .map(|img| (memory_upload_rels::memory.eq(id), memory_upload_rels::upload.eq(img)))
+                .collect::<Vec<_>>(),
+        )
+        .execute(conn)
+        .context("failed to add images for memory")
+}
+
+pub fn query_images<T>(conn: &T, memories: &Vec<Memory>) -> Result<Vec<Vec<Upload>>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    let upload_set: Vec<Vec<(MemoryUploadRel, Upload)>> = MemoryUploadRel::belonging_to(memories).inner_join(uploads::table).load(conn)?.grouped_by(memories);
+    Ok(upload_set.into_iter().map(|upls| upls.into_iter().map(|(_, u)| u).collect()).collect())
 }

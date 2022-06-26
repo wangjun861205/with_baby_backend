@@ -1,13 +1,7 @@
 use super::Error;
 use crate::domain::user;
-use crate::handlers;
 use crate::persister::postgres::PostgresPersister;
-use actix_web::{
-    cookie::Cookie,
-    http::StatusCode,
-    web::{Data, Json},
-    HttpResponse,
-};
+use actix_web::web::{Data, Json};
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},

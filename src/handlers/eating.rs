@@ -7,7 +7,7 @@ use crate::persister::postgres::PostgresPersister;
 use crate::token::UID;
 use actix_web::{
     web::{get, post, Data, Json},
-    Resource, Scope,
+    Scope,
 };
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};

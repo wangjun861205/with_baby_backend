@@ -1,18 +1,15 @@
 use crate::domain::upload::UploadStorer;
 use anyhow::Error;
-use async_trait::async_trait;
 use bytes::Bytes;
-use futures::{Sink, SinkExt, Stream, StreamExt};
-use std::os::unix::prelude::FileExt;
+use futures::{Sink, Stream};
+use infer::get_from_path;
+use std::path;
 use std::pin::Pin;
 use std::{
     fs::File,
     io::{Read, Write},
     task::{Context, Poll},
 };
-
-use infer::get_from_path;
-use std::path;
 use uuid::Uuid;
 
 pub struct AsyncFile {
@@ -27,7 +24,7 @@ impl AsyncFile {
 
 impl Sink<Bytes> for AsyncFile {
     type Error = Error;
-    fn poll_ready(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_ready(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 
@@ -36,11 +33,11 @@ impl Sink<Bytes> for AsyncFile {
         Ok(())
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_flush(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(self.file.flush().map_err(|e| Error::from(e)))
     }
 
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+    fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         Poll::Ready(Ok(()))
     }
 }
@@ -48,7 +45,7 @@ impl Sink<Bytes> for AsyncFile {
 impl Stream for AsyncFile {
     type Item = Result<Bytes, Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut buffer = vec![0u8; 1024];
         match self.file.read(&mut buffer) {
             Err(e) => return Poll::Ready(Some(Err(Error::from(e)))),
@@ -64,27 +61,29 @@ impl Stream for AsyncFile {
 }
 
 #[derive(Debug, Clone)]
-pub struct LocalStore;
+pub struct LocalStore {
+    path: String,
+}
 
 impl LocalStore {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(path: &str) -> Self {
+        Self { path: path.to_owned() }
     }
 }
 impl UploadStorer<AsyncFile, AsyncFile> for LocalStore {
     fn store(&self) -> Result<(AsyncFile, String), Error> {
         let name = Uuid::new_v4().to_string();
-        let file = File::create(format!("/tmp/{}", name))?;
+        let file = File::create(path::Path::new(&self.path).join(&name))?;
         Ok((AsyncFile::new(file), name))
     }
 
     fn get(&self, fetch_code: &str) -> Result<AsyncFile, Error> {
-        let file = File::open(format!("/tmp/{}", fetch_code))?;
+        let file = File::open(path::Path::new(&self.path).join(fetch_code))?;
         Ok(AsyncFile::new(file))
     }
 
     fn mime(&self, fetch_code: &str) -> Result<String, Error> {
-        let mime = get_from_path(path::Path::new("/tmp").join(fetch_code))?;
+        let mime = get_from_path(path::Path::new(&self.path).join(fetch_code))?;
         if let Some(t) = mime {
             return Ok(t.to_string());
         }
