@@ -14,6 +14,7 @@ use actix_web::{
 };
 use anyhow::Context;
 use diesel::Connection;
+use itertools::izip;
 use std::default::Default;
 
 pub fn register(scope: &str) -> Scope {
@@ -32,7 +33,7 @@ pub struct NearbyRequest {
     offset: i64,
 }
 
-pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<(Location, User, Vec<Equipment>, f64)>>, Error> {
+pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<(Location, User, Vec<Equipment>, Vec<Upload>, f64)>>, Error> {
     let conn = pool.get()?;
     let ((locs, dists), total) = location::query(
         &conn,
@@ -48,10 +49,8 @@ pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyReq
     .context("failed to find nearby locations")?;
     let users = user::discoverers_of_locations(&conn, &locs)?;
     let equips = equipment::equipements_of_locations(&conn, &locs)?;
-    Ok(Json(ListResponse::new(
-        locs.into_iter().zip(users).zip(equips).zip(dists).map(|(((l, u), e), d)| (l, u, e, d)).collect(),
-        total,
-    )))
+    let uploads = upload::uploads_of_locations(&conn, &locs)?;
+    Ok(Json(ListResponse::new(izip!(locs, users, equips, uploads, dists).collect(), total)))
 }
 
 #[derive(Debug, Deserialize)]
