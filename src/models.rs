@@ -61,22 +61,6 @@ pub struct Location {
     pub update_on: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize, Identifiable, QueryableByName, Clone)]
-#[table_name = "locations"]
-pub struct LocationWithDistance {
-    pub id: i32,
-    pub name: String,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub category: i32,
-    pub description: String,
-    pub discoverer: i32,
-    pub create_on: NaiveDateTime,
-    pub update_on: NaiveDateTime,
-    #[sql_type = "Decimal"]
-    pub distance: f64,
-}
-
 #[derive(Debug, Serialize, Deserialize, AsChangeset, Clone)]
 #[table_name = "locations"]
 pub struct LocationUpdating {

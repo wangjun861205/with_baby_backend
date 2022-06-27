@@ -20,3 +20,10 @@ where
 {
     Ok(Equipment::belonging_to(location).load(conn).context("failed to query equipments of locations")?.grouped_by(location))
 }
+
+pub fn equipements_of_location<T>(conn: &T, location: &Location) -> Result<Vec<Equipment>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    Equipment::belonging_to(location).load(conn).context("failed to query equipments of locations")
+}

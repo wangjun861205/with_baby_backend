@@ -1,7 +1,7 @@
-use crate::models::Upload;
+use crate::models::{Location, LocationUploadRel, Upload};
 use crate::schema::*;
 use anyhow::{Context, Error};
-use diesel::{insert_into, pg::Pg, Connection, ExpressionMethods, Insertable, QueryDsl, RunQueryDsl};
+use diesel::{insert_into, pg::Pg, BelongingToDsl, Connection, ExpressionMethods, GroupedBy, Insertable, QueryDsl, RunQueryDsl};
 
 #[derive(Debug, Insertable)]
 #[table_name = "location_upload_rels"]
@@ -54,4 +54,29 @@ where
     let total = c.count().get_result(conn).context("failed to find uploads")?;
     let list = q.load(conn).context("failed to find uploads")?;
     Ok((list, total))
+}
+
+pub fn uploads_of_locations<T>(conn: &T, locs: &Vec<Location>) -> Result<Vec<Vec<Upload>>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    Ok(LocationUploadRel::belonging_to(locs)
+        .inner_join(uploads::table)
+        .load::<(LocationUploadRel, Upload)>(conn)?
+        .grouped_by(locs)
+        .into_iter()
+        .map(|l| l.into_iter().map(|(_, u)| u).collect())
+        .collect())
+}
+
+pub fn uploads_of_location<T>(conn: &T, loc: &Location) -> Result<Vec<Upload>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    Ok(LocationUploadRel::belonging_to(loc)
+        .inner_join(uploads::table)
+        .load::<(LocationUploadRel, Upload)>(conn)?
+        .into_iter()
+        .map(|(_, u)| u)
+        .collect())
 }

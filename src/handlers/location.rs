@@ -1,12 +1,12 @@
-use super::models::Location;
+// use super::models::Location;
 use super::Error;
 use crate::handlers::PgPool;
 use crate::response::ListResponse;
 use crate::serde::Deserialize;
 use crate::token::UID;
 use crate::{
-    dao::{location, upload},
-    models::{LocationInsertion, LocationUpdating},
+    dao::{equipment, location, upload, user},
+    models::{Equipment, Location, LocationInsertion, LocationUpdating, Upload, User},
 };
 use actix_web::{
     web::{get, post, put, Data, Json, Path, Query},
@@ -32,9 +32,10 @@ pub struct NearbyRequest {
     offset: i64,
 }
 
-pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<Location>>, Error> {
-    let (list, total) = location::find(
-        &pool.get()?,
+pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<(Location, User, Vec<Equipment>, f64)>>, Error> {
+    let conn = pool.get()?;
+    let ((locs, dists), total) = location::query(
+        &conn,
         location::Query {
             latitude: params.latitude,
             longitude: params.longitude,
@@ -45,7 +46,12 @@ pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyReq
         },
     )
     .context("failed to find nearby locations")?;
-    Ok(Json(ListResponse::new(list.into_iter().map(|v| v.into()).collect(), total)))
+    let users = user::discoverers_of_locations(&conn, &locs)?;
+    let equips = equipment::equipements_of_locations(&conn, &locs)?;
+    Ok(Json(ListResponse::new(
+        locs.into_iter().zip(users).zip(equips).zip(dists).map(|(((l, u), e), d)| (l, u, e, d)).collect(),
+        total,
+    )))
 }
 
 #[derive(Debug, Deserialize)]
@@ -98,9 +104,13 @@ pub struct DetailParams {
     longitude: f64,
 }
 
-pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query(DetailParams { latitude, longitude }): Query<DetailParams>) -> Result<Json<Location>, Error> {
+pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query(DetailParams { latitude, longitude }): Query<DetailParams>) -> Result<Json<(Location, User, Vec<Upload>, Vec<Equipment>, f64)>, Error> {
     let conn = pool.get().context("failed to get location detail")?;
-    Ok(Json(location::get(&conn, id.0, latitude, longitude).context("failed to get location detail")?.into()))
+    let (loc, dist) = location::get(&conn, id.0, latitude, longitude)?;
+    let user = user::discoverer_of_location(&conn, &loc)?;
+    let uploads = upload::uploads_of_location(&conn, &loc)?;
+    let equipments = equipment::equipements_of_location(&conn, &loc)?;
+    Ok(Json((loc, user, uploads, equipments, dist)))
 }
 
 #[derive(Debug, Deserialize)]

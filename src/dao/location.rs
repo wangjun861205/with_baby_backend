@@ -1,5 +1,5 @@
 use crate::domain::upload;
-use crate::models::{Location, LocationInsertion, LocationUpdating, LocationUploadRel, LocationWithDistance, Upload, User};
+use crate::models::{Location, LocationInsertion, LocationUpdating, LocationUploadRel, Upload, User};
 use crate::schema::*;
 use crate::serde::{Deserialize, Serialize};
 use anyhow::{Context, Error};
@@ -23,10 +23,45 @@ pub struct Query {
     pub offset: i64,
 }
 
-pub fn query<T>(conn: &T, query: Query) -> Result<(Vec<LocationWithDistance>, i64), Error>
+pub fn query<T>(conn: &T, query: Query) -> Result<((Vec<Location>, Vec<f64>), i64), Error>
 where
     T: Connection<Backend = Pg>,
 {
+    let mut c = locations::table
+        .filter(sql(&format!(
+            "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(locations.latitude, locations.longitude)",
+            query.latitude, query.longitude, query.radius
+        )))
+        .into_boxed();
+    let mut q = locations::table
+        .select((
+            locations::all_columns,
+            sql::<Double>(&format!(
+                "earth_distance(ll_to_earth({}, {}), ll_to_earth(locations.latitude, locations.longitude)) as distance",
+                query.latitude, query.longitude
+            )),
+        ))
+        .filter(sql(&format!(
+            "earth_box(ll_to_earth({}, {}), {}) @> ll_to_earth(locations.latitude, locations.longitude)",
+            query.latitude, query.longitude, query.radius
+        )))
+        .limit(query.limit)
+        .offset(query.offset)
+        .into_boxed();
+
+    if let Some(name) = query.name {
+        c = c.filter(locations::name.like(format!("%{}%", name)));
+        q = q.filter(locations::name.like(format!("%{}%", name)));
+    }
+    if let Some(category) = query.category {
+        c = c.filter(locations::category.eq(category));
+        q = q.filter(locations::category.eq(category));
+    }
+    q = q.order_by(sql::<Double>("distance"));
+    let total = c.count().get_result(conn).context("failed to find locations")?;
+    let rows: Vec<(Location, f64)> = q.load(conn).context("failed to find locations")?;
+    let (locs, dists) = rows.into_iter().unzip();
+    Ok(((locs, dists), total))
 }
 
 pub fn find<T>(conn: &T, query: Query) -> Result<(Vec<(Location, User, f64, Vec<Upload>)>, i64), Error>
@@ -80,26 +115,20 @@ where
     Ok((l.into_iter().zip(images).map(|((l, u, d), imgs)| (l, u, d, imgs)).collect(), total))
 }
 
-pub fn get<T>(conn: &T, id: i32, latitude: f64, longitude: f64) -> Result<(Location, User, f64, Vec<Upload>), Error>
+pub fn get<T>(conn: &T, id: i32, latitude: f64, longitude: f64) -> Result<(Location, f64), Error>
 where
     T: Connection<Backend = Pg>,
 {
-    let (loc, user, dist) = locations::table
+    let (loc, dist) = locations::table
         .inner_join(users::table)
         .select((
             locations::all_columns,
-            users::all_columns,
             sql::<Double>(&format!("earth_distance(ll_to_earth({}, {}), ll_to_earth(latitude, longitude))", latitude, longitude)),
         ))
         .filter(locations::id.eq(id))
-        .get_result::<(Location, User, f64)>(conn)
+        .get_result::<(Location, f64)>(conn)
         .context("failed to get location")?;
-    let images = LocationUploadRel::belonging_to(&loc)
-        .inner_join(uploads::table)
-        .select(uploads::all_columns)
-        .load(conn)
-        .context("failed to get location")?;
-    Ok((loc, user, dist, images))
+    Ok((loc, dist))
 }
 
 pub fn get_without_coord<T>(conn: &T, id: i32) -> Result<(Location, User, Vec<Upload>), Error>
