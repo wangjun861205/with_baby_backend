@@ -27,6 +27,7 @@ pub struct User {
     salt: String,
     create_on: chrono::NaiveDateTime,
     update_on: chrono::NaiveDateTime,
+    avatar: Option<i32>,
 }
 
 impl From<User> for user::User {
@@ -39,6 +40,7 @@ impl From<User> for user::User {
             salt: u.salt,
             create_on: u.create_on,
             update_on: u.update_on,
+            avatar: u.avatar,
         }
     }
 }

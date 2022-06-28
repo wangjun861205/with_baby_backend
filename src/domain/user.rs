@@ -29,6 +29,7 @@ pub struct User {
     pub salt: String,
     pub create_on: chrono::NaiveDateTime,
     pub update_on: chrono::NaiveDateTime,
+    pub avatar: Option<i32>,
 }
 
 pub trait UserPersister {
@@ -47,6 +48,7 @@ pub struct Registration {
     pub name: String,
     pub phone: String,
     pub password: String,
+    pub avatar: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -87,7 +89,13 @@ pub trait TokenGenerator {
     fn gen(&self, id: i32) -> String;
 }
 
-pub fn login<P, PH>(persister: P, password_hasher: PH, req: Login) -> Result<i32, Error>
+pub struct LoginResult {
+    pub id: i32,
+    pub name: String,
+    pub avatar: Option<i32>,
+}
+
+pub fn login<P, PH>(persister: P, password_hasher: PH, req: Login) -> Result<LoginResult, Error>
 where
     P: UserPersister,
     PH: PasswordHasher,
@@ -97,5 +105,9 @@ where
     if hashed_password != user.password {
         return Err(Error::msg("invalid phone or password"));
     }
-    Ok(user.id)
+    Ok(LoginResult {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar,
+    })
 }

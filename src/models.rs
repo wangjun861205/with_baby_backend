@@ -13,6 +13,7 @@ pub struct User {
     pub salt: String,
     pub create_on: NaiveDateTime,
     pub update_on: NaiveDateTime,
+    pub avatar: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName)]

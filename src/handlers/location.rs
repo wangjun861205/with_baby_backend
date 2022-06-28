@@ -103,13 +103,13 @@ pub struct DetailParams {
     longitude: f64,
 }
 
-pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query(DetailParams { latitude, longitude }): Query<DetailParams>) -> Result<Json<(Location, User, Vec<Upload>, Vec<Equipment>, f64)>, Error> {
+pub async fn detail(pool: Data<PgPool>, id: Path<(i32,)>, Query(DetailParams { latitude, longitude }): Query<DetailParams>) -> Result<Json<(Location, User, Vec<Equipment>, Vec<Upload>, f64)>, Error> {
     let conn = pool.get().context("failed to get location detail")?;
     let (loc, dist) = location::get(&conn, id.0, latitude, longitude)?;
     let user = user::discoverer_of_location(&conn, &loc)?;
     let uploads = upload::uploads_of_location(&conn, &loc)?;
     let equipments = equipment::equipements_of_location(&conn, &loc)?;
-    Ok(Json((loc, user, uploads, equipments, dist)))
+    Ok(Json((loc, user, equipments, uploads, dist)))
 }
 
 #[derive(Debug, Deserialize)]

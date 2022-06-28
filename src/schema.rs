@@ -123,6 +123,7 @@ table! {
         salt -> Varchar,
         create_on -> Timestamp,
         update_on -> Timestamp,
+        avatar -> Nullable<Int4>,
     }
 }
 
@@ -142,7 +143,6 @@ joinable!(memory_upload_rels -> uploads (upload));
 joinable!(playings -> users (discoverer));
 joinable!(playings_uploads -> playings (playing_id));
 joinable!(playings_uploads -> uploads (upload_id));
-joinable!(uploads -> users (owner));
 
 allow_tables_to_appear_in_same_query!(
     comments,

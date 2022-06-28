@@ -1,4 +1,4 @@
-use crate::domain::user;
+use crate::domain::user::{self, LoginResult};
 use crate::error::Error;
 use crate::persister::postgres::PostgresPersister;
 use actix_web::web::{Data, Json};
@@ -48,14 +48,23 @@ where
     Ok(Json(token))
 }
 
-pub async fn signin<PH, TK>(db: Data<Pool<ConnectionManager<PgConnection>>>, password_hasher: Data<PH>, tokener: Data<TK>, Json(req): Json<user::Login>) -> Result<String, Error>
+#[derive(Debug, Serialize)]
+pub struct SigninResponse {
+    id: i32,
+    name: String,
+    token: String,
+    avatar: Option<i32>,
+}
+
+pub async fn signin<PH, TK>(db: Data<Pool<ConnectionManager<PgConnection>>>, password_hasher: Data<PH>, tokener: Data<TK>, Json(req): Json<user::Login>) -> Result<Json<SigninResponse>, Error>
 where
     PH: user::PasswordHasher,
     TK: super::Tokener,
 {
     let p = PostgresPersister::new(db.get().unwrap());
-    let uid = user::login(p, password_hasher, req)?;
-    Ok(tokener.generate(uid)?)
+    let LoginResult { id, name, avatar } = user::login(p, password_hasher, req)?;
+    let token = tokener.generate(id)?;
+    Ok(Json(SigninResponse { id, name, token, avatar }))
 }
 
 #[derive(Debug, Serialize)]
