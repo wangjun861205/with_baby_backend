@@ -1,3 +1,4 @@
+use crate::error;
 use crate::handlers;
 use crate::handlers::Tokener;
 use crate::token::UID;
@@ -91,13 +92,13 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let headers = req.headers().get(handlers::JWT_TOKEN);
         if headers.is_none() {
-            return Box::pin(ready(Err(handlers::Error::from(anyhow::Error::msg("failed to extract jwt token from request headers")).into())));
+            return Box::pin(ready(Err(error::Error::PermissionError.into())));
         }
         let token = headers.unwrap().to_str();
         if let Ok(t) = token {
             match self.jwt.validate(t) {
                 Err(err) => {
-                    return Box::pin(async move { Err(Error::from(crate::handlers::Error::AnyhowError(err))) });
+                    return Box::pin(ready(Err(error::Error::PermissionError.into())));
                 }
                 Ok(uid) => {
                     req.extensions_mut().insert(UID(uid));
@@ -109,6 +110,6 @@ where
                 }
             }
         }
-        return Box::pin(ready(Err(handlers::Error::from(anyhow::Error::msg("invalid jwt token")).into())));
+        return Box::pin(ready(Err(error::Error::PermissionError.into())));
     }
 }

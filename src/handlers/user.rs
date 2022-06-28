@@ -1,5 +1,5 @@
-use super::Error;
 use crate::domain::user;
+use crate::error::Error;
 use crate::persister::postgres::PostgresPersister;
 use actix_web::web::{Data, Json};
 use diesel::{

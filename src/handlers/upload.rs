@@ -1,5 +1,6 @@
-use super::{Error, PgPool};
+use super::PgPool;
 use crate::domain::upload;
+use crate::error::Error;
 use crate::persister::postgres::PostgresPersister;
 use crate::storer::local::LocalStore;
 use crate::token::UID;

@@ -1,5 +1,5 @@
 // use super::models::Location;
-use super::Error;
+use crate::error::Error;
 use crate::handlers::PgPool;
 use crate::response::ListResponse;
 use crate::serde::Deserialize;
@@ -34,7 +34,7 @@ pub struct NearbyRequest {
 }
 
 pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<(Location, User, Vec<Equipment>, Vec<Upload>, f64)>>, Error> {
-    let conn = pool.get()?;
+    let conn = pool.get().context("failed to get nearby locations")?;
     let ((locs, dists), total) = location::query(
         &conn,
         location::Query {
@@ -64,7 +64,7 @@ pub struct CreateRequest {
 }
 
 pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<CreateRequest>) -> Result<Json<i32>, Error> {
-    let conn = pool.get()?;
+    let conn = pool.get().context("failed to create location")?;
     let id = conn.transaction(|| {
         let exists = location::exists(
             &conn,
@@ -121,7 +121,7 @@ pub struct UpdateBody {
 }
 
 pub async fn update(pool: Data<PgPool>, uid: UID, id: Path<(i32,)>, Json(body): Json<UpdateBody>) -> Result<Json<usize>, Error> {
-    let conn = pool.get()?;
+    let conn = pool.get().context("failed to update location")?;
     let (loc, user, _) = location::get_without_coord(&conn, id.0)?;
     if user.id != uid.0 {
         return Err(Error::PermissionError);

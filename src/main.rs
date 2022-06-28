@@ -1,5 +1,6 @@
 mod dao;
 mod domain;
+mod error;
 mod generator;
 mod handlers;
 mod hasher;
@@ -26,7 +27,7 @@ use diesel::{
 };
 use env_logger;
 use generator::random::Generator;
-use handlers::{eating, location, memory, playing, upload};
+use handlers::{location, memory, upload};
 use hasher::sha::Hasher;
 use rand::{rngs::ThreadRng, thread_rng};
 use token::jwt::JWT;
@@ -65,9 +66,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 scope("/api")
                     .wrap(jwt)
-                    .service(playing::register_router())
                     .service(upload::register_route("/upload"))
-                    .service(eating::register("/eatings"))
                     .service(memory::register(location::register("/locations"))),
             )
     })

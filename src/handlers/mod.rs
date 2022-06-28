@@ -1,37 +1,21 @@
-pub mod eating;
-pub mod location;
-pub mod memory;
-pub mod models;
-pub mod playing;
-pub mod upload;
-pub mod user;
+pub(crate) mod location;
+pub(crate) mod memory;
+pub(crate) mod models;
+pub(crate) mod upload;
+pub(crate) mod user;
 
 use anyhow;
-use thiserror;
 
 use crate::domain::user::{PasswordHasher, SaltGenerator};
-use actix_web::ResponseError;
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
-use r2d2;
 use serde::Serialize;
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 pub static JWT_TOKEN: &str = "JWT_TOKEN";
-
-#[derive(thiserror::Error, Debug)]
-#[error(transparent)]
-pub enum Error {
-    AnyhowError(#[from] anyhow::Error),
-    R2D2Error(#[from] r2d2::Error),
-    #[error("no permission")]
-    PermissionError,
-}
-
-impl ResponseError for Error {}
 
 pub trait Tokener {
     fn generate(&self, uid: i32) -> Result<String, anyhow::Error>;
