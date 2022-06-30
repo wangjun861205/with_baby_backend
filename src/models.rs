@@ -2,8 +2,9 @@ use crate::schema::*;
 use chrono::NaiveDateTime;
 use diesel::{sql_types::Decimal, AsChangeset, Associations, Identifiable, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
+use std::default::Default;
 
-#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Insertable)]
+#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, Insertable)]
 #[table_name = "users"]
 pub struct User {
     pub id: i32,
@@ -13,6 +14,16 @@ pub struct User {
     pub salt: String,
     pub create_on: NaiveDateTime,
     pub update_on: NaiveDateTime,
+    pub avatar: Option<i32>,
+}
+
+#[derive(Debug, AsChangeset, Default)]
+#[table_name = "users"]
+pub struct UserCommand {
+    pub name: Option<String>,
+    pub phone: Option<String>,
+    pub password: Option<String>,
+    pub salt: Option<String>,
     pub avatar: Option<i32>,
 }
 

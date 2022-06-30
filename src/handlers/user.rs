@@ -1,12 +1,19 @@
+use crate::dao::user::update;
 use crate::domain::user::{self, LoginResult};
 use crate::error::Error;
+use crate::models::UserCommand;
 use crate::persister::postgres::PostgresPersister;
+use crate::token::UID;
 use actix_web::web::{Data, Json};
+use anyhow::Context;
 use diesel::{
     pg::PgConnection,
     r2d2::{ConnectionManager, Pool},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::default::Default;
+
+use super::PgPool;
 
 impl<T> user::SaltGenerator for Data<T>
 where
@@ -77,4 +84,23 @@ impl From<user::User> for User {
     fn from(u: user::User) -> Self {
         Self { id: u.id, name: u.name }
     }
+}
+
+#[derive(Deserialize)]
+pub struct UpdateAvatar {
+    avatar: i32,
+}
+
+pub async fn update_avatar(db: Data<PgPool>, uid: UID, Json(UpdateAvatar { avatar }): Json<UpdateAvatar>) -> Result<Json<usize>, Error> {
+    let conn = db.get().context("failed to udpate avatar")?;
+    let effected = update(
+        &conn,
+        uid.0,
+        UserCommand {
+            avatar: Some(avatar),
+            ..Default::default()
+        },
+    )
+    .context("failed to update avatar")?;
+    Ok(Json(effected))
 }

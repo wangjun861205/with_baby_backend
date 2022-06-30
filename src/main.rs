@@ -67,7 +67,8 @@ async fn main() -> std::io::Result<()> {
                 scope("/api")
                     .wrap(jwt)
                     .service(upload::register_route("/upload"))
-                    .service(memory::register(location::register("/locations"))),
+                    .service(memory::register(location::register("/locations")))
+                    .service(scope("/my").route("/avatar", web::put().to(handlers::user::update_avatar))),
             )
     })
     .bind((

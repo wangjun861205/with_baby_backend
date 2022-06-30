@@ -1,8 +1,8 @@
-use crate::models::{Location, User};
+use crate::models::{Location, User, UserCommand};
 use crate::schema::*;
 use anyhow::{Context, Error};
 use diesel::sql_types::{Array, Integer};
-use diesel::{dsl::sql, pg::Pg, sql_query, BelongingToDsl, BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{dsl::sql, pg::Pg, sql_query, Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 
 pub fn discoverers_of_locations<T>(conn: &T, locations: &Vec<Location>) -> Result<Vec<User>, Error>
 where
@@ -19,4 +19,11 @@ where
     T: Connection<Backend = Pg>,
 {
     users::table.filter(users::id.eq(location.discoverer)).first(conn).context("failed to get discoverer of location")
+}
+
+pub fn update<T>(conn: &T, id: i32, user: UserCommand) -> Result<usize, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    diesel::update(users::table.filter(users::id.eq(id))).set(user).execute(conn).context("failed to update user")
 }
