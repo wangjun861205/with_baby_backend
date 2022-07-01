@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS rank_aggregations (
+	id SERIAL NOT NULL,
+	total BIGINT NOT NULL,
+	count BIGINT NOT NULL,
+	location_id INTEGER NOT NULL REFERENCES locations (id),
+	create_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	update_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (id)
+);
+
+CREATE TRIGGER update_rank_aggregation_update_on BEFORE UPDATE ON rank_aggregations  FOR EACH ROW EXECUTE PROCEDURE update_update_on();

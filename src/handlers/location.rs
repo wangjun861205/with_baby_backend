@@ -1,11 +1,12 @@
 // use super::models::Location;
 use crate::error::Error;
 use crate::handlers::PgPool;
+use crate::models::RankAggregationCommand;
 use crate::response::ListResponse;
 use crate::serde::Deserialize;
 use crate::token::UID;
 use crate::{
-    dao::{equipment, location, upload, user},
+    dao::{equipment, location, rank_aggregation, upload, user},
     models::{Equipment, Location, LocationInsertion, LocationUpdating, Upload, User},
 };
 use actix_web::{
@@ -92,6 +93,9 @@ pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<Crea
         for img_id in body.images {
             upload::insert_location_upload_rel(&conn, upload::LocationUploadRelInsertion { location_id: id, upload_id: img_id })?;
         }
+        // create rank aggregation
+        rank_aggregation::insert(&conn, RankAggregationCommand { total: 0, count: 0, location_id: id })?;
+
         Ok(id)
     })?;
     Ok(Json(id))

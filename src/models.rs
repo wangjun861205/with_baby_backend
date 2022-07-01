@@ -1,10 +1,10 @@
 use crate::schema::*;
 use chrono::NaiveDateTime;
-use diesel::{sql_types::Decimal, AsChangeset, Associations, Identifiable, Insertable, Queryable, QueryableByName};
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, QueryableByName};
 use serde::{Deserialize, Serialize};
 use std::default::Default;
 
-#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, Insertable)]
+#[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName)]
 #[table_name = "users"]
 pub struct User {
     pub id: i32,
@@ -164,4 +164,23 @@ pub struct EquipmentCommand {
     is_required: bool,
     usage: String,
     location: i32,
+}
+
+#[derive(Debug, Serialize, Queryable, QueryableByName)]
+#[table_name = "rank_aggregations"]
+pub struct RankAggregation {
+    pub id: i32,
+    pub total: i64,
+    pub count: i64,
+    pub location_id: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Insertable, AsChangeset)]
+#[table_name = "rank_aggregations"]
+pub struct RankAggregationCommand {
+    pub total: i64,
+    pub count: i64,
+    pub location_id: i32,
 }

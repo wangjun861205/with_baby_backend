@@ -105,6 +105,17 @@ table! {
 }
 
 table! {
+    rank_aggregations (id) {
+        id -> Int4,
+        total -> Int8,
+        count -> Int8,
+        location_id -> Int4,
+        create_on -> Timestamp,
+        update_on -> Timestamp,
+    }
+}
+
+table! {
     uploads (id) {
         id -> Int4,
         fetch_code -> Varchar,
@@ -143,6 +154,7 @@ joinable!(memory_upload_rels -> uploads (upload));
 joinable!(playings -> users (discoverer));
 joinable!(playings_uploads -> playings (playing_id));
 joinable!(playings_uploads -> uploads (upload_id));
+joinable!(rank_aggregations -> locations (location_id));
 
 allow_tables_to_appear_in_same_query!(
     comments,
@@ -155,6 +167,7 @@ allow_tables_to_appear_in_same_query!(
     memory_upload_rels,
     playings,
     playings_uploads,
+    rank_aggregations,
     uploads,
     users,
 );
