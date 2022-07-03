@@ -18,8 +18,8 @@ extern crate serde;
 use actix_web::{
     middleware::Logger,
     web::scope,
-    web::{self, Data},
-    App, HttpServer,
+    web::{self, service, Data},
+    App, HttpServer, Scope,
 };
 use diesel::{
     r2d2::{ConnectionManager, Pool},
@@ -27,7 +27,7 @@ use diesel::{
 };
 use env_logger;
 use generator::random::Generator;
-use handlers::{location, memory, upload};
+use handlers::{comment, location, memory, upload};
 use hasher::sha::Hasher;
 use rand::{rngs::ThreadRng, thread_rng};
 use token::jwt::JWT;
@@ -41,6 +41,10 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().expect("failed to load .env file");
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("debug"));
     HttpServer::new(move || {
+        let mut location_scope = scope("/locations");
+        location_scope = location::register(location_scope);
+        location_scope = memory::register(location_scope);
+        location_scope = comment::register(location_scope);
         let mgr: ConnectionManager<PgConnection> = diesel::r2d2::ConnectionManager::new(dotenv::var(DATABASE_URL).expect("DATABASE_URL environment variable not exists"));
         let pool = Pool::new(mgr).expect("failed to create database connection pool");
         let jwt = JWT::new(
@@ -67,8 +71,9 @@ async fn main() -> std::io::Result<()> {
                 scope("/api")
                     .wrap(jwt)
                     .service(upload::register_route("/upload"))
-                    .service(memory::register(location::register("/locations")))
-                    .service(scope("/my").route("/avatar", web::put().to(handlers::user::update_avatar))),
+                    .service(location_scope)
+                    .service(scope("/my").route("/avatar", web::put().to(handlers::user::update_avatar)))
+                    .service(scope("/memories").route("", web::get().to(memory::near_memories))),
             )
     })
     .bind((

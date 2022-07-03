@@ -1,13 +1,12 @@
 // use super::models::Location;
 use crate::error::Error;
 use crate::handlers::PgPool;
-use crate::models::RankAggregationCommand;
 use crate::response::ListResponse;
 use crate::serde::Deserialize;
 use crate::token::UID;
 use crate::{
     dao::{equipment, location, rank_aggregation, upload, user},
-    models::{Equipment, Location, LocationInsertion, LocationUpdating, Upload, User},
+    models::{Equipment, Location, LocationInsertion, LocationUpdating, RankAggregation, RankAggregationInsert, Upload, User},
 };
 use actix_web::{
     web::{get, post, put, Data, Json, Path, Query},
@@ -18,12 +17,13 @@ use diesel::Connection;
 use itertools::izip;
 use std::default::Default;
 
-pub fn register(scope: &str) -> Scope {
-    Scope::new(scope)
+pub fn register(scope: Scope) -> Scope {
+    scope
         .route("", get().to(nearby_locations))
         .route("", post().to(create_location))
         .route("/{id}", get().to(detail))
         .route("/{id}", put().to(update))
+        .route("/my", get().to(my_locations))
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,7 +34,7 @@ pub struct NearbyRequest {
     offset: i64,
 }
 
-pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<(Location, User, Vec<Equipment>, Vec<Upload>, f64)>>, Error> {
+pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyRequest>) -> Result<Json<ListResponse<(Location, User, Vec<Equipment>, Vec<Upload>, f64, RankAggregation)>>, Error> {
     let conn = pool.get().context("failed to get nearby locations")?;
     let ((locs, dists), total) = location::query(
         &conn,
@@ -51,7 +51,8 @@ pub async fn nearby_locations(pool: Data<PgPool>, Query(params): Query<NearbyReq
     let users = user::discoverers_of_locations(&conn, &locs)?;
     let equips = equipment::equipements_of_locations(&conn, &locs)?;
     let uploads = upload::uploads_of_locations(&conn, &locs)?;
-    Ok(Json(ListResponse::new(izip!(locs, users, equips, uploads, dists).collect(), total)))
+    let rank_agg = rank_aggregation::rank_aggs_of_location(&conn, &locs)?;
+    Ok(Json(ListResponse::new(izip!(locs, users, equips, uploads, dists, rank_agg).collect(), total)))
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,7 +95,7 @@ pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<Crea
             upload::insert_location_upload_rel(&conn, upload::LocationUploadRelInsertion { location_id: id, upload_id: img_id })?;
         }
         // create rank aggregation
-        rank_aggregation::insert(&conn, RankAggregationCommand { total: 0, count: 0, location_id: id })?;
+        rank_aggregation::insert(&conn, RankAggregationInsert { total: 0, count: 0, location_id: id })?;
 
         Ok(id)
     })?;
@@ -148,4 +149,30 @@ pub async fn update(pool: Data<PgPool>, uid: UID, id: Path<(i32,)>, Json(body): 
         Ok(())
     })?;
     Ok(Json(1))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MyLocations {
+    latitude: f64,
+    longitude: f64,
+    limit: i64,
+    offset: i64,
+    order_by: location::OrderBy,
+}
+
+pub(crate) async fn my_locations(pool: Data<PgPool>, UID(uid): UID, Query(q): Query<MyLocations>) -> Result<Json<ListResponse<(Location, f64)>>, Error> {
+    let ((locs, dists), total) = location::query(
+        &pool.get()?,
+        location::Query {
+            latitude: q.latitude,
+            longitude: q.longitude,
+            radius: 10i32.pow(5) as f64,
+            limit: q.limit,
+            offset: q.offset,
+            order_by: q.order_by,
+            ..Default::default()
+        },
+    )?;
+    let list = izip!(locs, dists).into_iter().collect();
+    Ok(Json(ListResponse::new(list, total)))
 }

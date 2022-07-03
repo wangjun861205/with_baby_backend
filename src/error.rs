@@ -1,9 +1,15 @@
 use actix_web::{http::StatusCode, ResponseError};
+use diesel::result;
+use r2d2;
 use thiserror;
 
 #[derive(thiserror::Error, Debug)]
 #[error(transparent)]
 pub enum Error {
+    #[error("failed to get database connection")]
+    DatabaseConnectionError(#[from] r2d2::Error),
+    #[error("database error")]
+    DatabaseError(#[from] result::Error),
     #[error("no permission")]
     PermissionError,
     #[error("{}", .0)]

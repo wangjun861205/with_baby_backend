@@ -1,17 +1,18 @@
-use crate::models::{Comment, CommentCommand};
+use crate::models::{Comment, CommentInsert, CommentUpdate};
 use crate::schema::comments;
-use anyhow::{Context, Error};
-use diesel::{insert_into, pg::Pg, BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{insert_into, pg::Pg, result::Error, select, BoolExpressionMethods, Connection, ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl};
+use std::default::Default;
 
+#[derive(Debug, Default)]
 pub struct Query {
-    rank_gt: Option<i32>,
-    rank_lt: Option<i32>,
-    location: Option<i32>,
-    limit: i64,
-    offset: i64,
+    pub rank_gt: Option<i32>,
+    pub rank_lt: Option<i32>,
+    pub location: Option<i32>,
+    pub limit: i64,
+    pub offset: i64,
 }
 
-pub fn find<T>(conn: &T, query: Query) -> Result<(Vec<Comment>, i64), Error>
+pub fn query<T>(conn: &T, query: Query) -> Result<(Vec<Comment>, i64), Error>
 where
     T: Connection<Backend = Pg>,
 {
@@ -29,25 +30,35 @@ where
         q = q.filter(comments::location.eq(location));
         c = c.filter(comments::location.eq(location));
     }
-    let total = c.count().get_result(conn).context("failed to find comments")?;
-    let list = q.order(comments::update_on.desc()).load(conn).context("failed to find comments")?;
+    let total = c.count().get_result(conn)?;
+    let list = q.order(comments::update_on.desc()).load(conn)?;
     Ok((list, total))
 }
 
-pub fn insert<T>(conn: &T, ins: CommentCommand) -> Result<i32, Error>
+pub fn insert<T>(conn: &T, ins: CommentInsert) -> Result<i32, Error>
 where
     T: Connection<Backend = Pg>,
 {
-    insert_into(comments::table)
-        .values(ins)
-        .returning(comments::id)
-        .get_result(conn)
-        .context("failed to insert into comments")
+    insert_into(comments::table).values(ins).returning(comments::id).get_result(conn)
 }
 
-pub fn update<T>(conn: &T, id: i32, upd: CommentCommand) -> Result<usize, Error>
+pub fn update<T>(conn: &T, user: i32, loc: i32, upd: CommentUpdate) -> Result<usize, Error>
 where
     T: Connection<Backend = Pg>,
 {
-    diesel::update(comments::table).filter(comments::id.eq(id)).set(upd).execute(conn).context("failed to update comment")
+    diesel::update(comments::table.filter(comments::user.eq(user).and(comments::location.eq(loc)))).set(upd).execute(conn)
+}
+
+pub fn may_get<T>(conn: &T, user: i32, loc: i32) -> Result<Option<Comment>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    comments::table.filter(comments::user.eq(user).and(comments::location.eq(loc))).get_result(conn).optional()
+}
+
+pub fn may_get_for_update<T>(conn: &T, user: i32, loc: i32) -> Result<Option<Comment>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    comments::table.filter(comments::user.eq(user).and(comments::location.eq(loc))).for_update().get_result(conn).optional()
 }

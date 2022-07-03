@@ -1,0 +1,1 @@
+ALTER TABLE rank_aggregations ADD CONSTRAINT uni_location_id UNIQUE (location_id);

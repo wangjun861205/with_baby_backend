@@ -1,3 +1,4 @@
+pub(crate) mod comment;
 pub(crate) mod location;
 pub(crate) mod memory;
 pub(crate) mod models;

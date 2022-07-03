@@ -1,0 +1,1 @@
+ALTER TABLE comments ADD CONSTRAINT uni_user_location UNIQUE ("user", location);

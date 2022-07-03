@@ -1,9 +1,9 @@
-use crate::models::{RankAggregation, RankAggregationCommand};
+use crate::models::{Location, RankAggregation, RankAggregationInsert, RankAggregationUpdate};
 use crate::schema::*;
 use anyhow::{Context, Error};
-use diesel::{insert_into, pg::Pg, Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{insert_into, pg::Pg, BelongingToDsl, Connection, ExpressionMethods, GroupedBy, QueryDsl, RunQueryDsl};
 
-pub fn insert<T>(conn: &T, ra: RankAggregationCommand) -> Result<i32, Error>
+pub fn insert<T>(conn: &T, ra: RankAggregationInsert) -> Result<i32, Error>
 where
     T: Connection<Backend = Pg>,
 {
@@ -14,23 +14,31 @@ where
         .context("failed to insert rank aggregation")
 }
 
-pub fn update<T>(conn: &T, id: i32, ra: RankAggregationCommand) -> Result<usize, Error>
+pub fn update<T>(conn: &T, loc: i32, ra: RankAggregationUpdate) -> Result<usize, Error>
 where
     T: Connection<Backend = Pg>,
 {
-    diesel::update(rank_aggregations::table.filter(rank_aggregations::id.eq(id)))
+    diesel::update(rank_aggregations::table.filter(rank_aggregations::location_id.eq(loc)))
         .set(ra)
         .execute(conn)
         .context("failed to update rank aggregation")
 }
 
-pub fn get_for_update<T>(conn: &T, id: i32) -> Result<RankAggregation, Error>
+pub fn get_for_update<T>(conn: &T, loc: i32) -> Result<RankAggregation, Error>
 where
     T: Connection<Backend = Pg>,
 {
     rank_aggregations::table
-        .filter(rank_aggregations::id.eq(id))
+        .filter(rank_aggregations::location_id.eq(loc))
         .for_update()
         .first(conn)
         .context("failed to get rank aggregation for update")
+}
+
+pub fn rank_aggs_of_location<T>(conn: &T, locs: &Vec<Location>) -> Result<Vec<RankAggregation>, Error>
+where
+    T: Connection<Backend = Pg>,
+{
+    let l: Vec<Vec<RankAggregation>> = RankAggregation::belonging_to(locs).load::<RankAggregation>(conn)?.grouped_by(locs);
+    Ok(l.into_iter().flatten().collect())
 }

@@ -30,22 +30,29 @@ pub struct UserCommand {
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName)]
 #[table_name = "comments"]
 pub struct Comment {
-    id: i32,
-    rank: i32,
-    content: String,
-    user: i32,
-    location: i32,
-    create_on: NaiveDateTime,
-    update_on: NaiveDateTime,
+    pub id: i32,
+    pub rank: i32,
+    pub content: String,
+    pub user: i32,
+    pub location: i32,
+    pub create_on: NaiveDateTime,
+    pub update_on: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, Deserialize, Insertable, Queryable, QueryableByName, AsChangeset)]
+#[derive(Debug, Serialize, Deserialize, Insertable)]
 #[table_name = "comments"]
-pub struct CommentCommand {
-    rank: i32,
-    content: String,
-    user: i32,
-    location: i32,
+pub struct CommentInsert {
+    pub rank: i32,
+    pub content: String,
+    pub user: i32,
+    pub location: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, AsChangeset)]
+#[table_name = "comments"]
+pub struct CommentUpdate {
+    pub rank: i32,
+    pub content: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Insertable, AsChangeset)]
@@ -123,8 +130,29 @@ pub struct MemoryCommand {
     pub location: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryOrderBy {
+    Distance,
+    DistanceDesc,
+    CreateOn,
+    CreateOnDesc,
+    UpdateOn,
+    UpdateOnDesc,
+    Title,
+    TitleDesc,
+}
+
+impl Default for MemoryOrderBy {
+    fn default() -> Self {
+        Self::Distance
+    }
+}
+
+#[derive(Debug, Deserialize, Default)]
 pub struct MemoryQuery {
+    pub latitude: f64,
+    pub longitude: f64,
     pub title: Option<String>,
     pub owner: Option<i32>,
     pub location: Option<i32>,
@@ -132,6 +160,7 @@ pub struct MemoryQuery {
     pub create_after: Option<NaiveDateTime>,
     pub limit: i64,
     pub offset: i64,
+    pub order_by: MemoryOrderBy,
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName, Associations, Identifiable)]
@@ -166,8 +195,9 @@ pub struct EquipmentCommand {
     location: i32,
 }
 
-#[derive(Debug, Serialize, Queryable, QueryableByName)]
+#[derive(Debug, Serialize, Queryable, QueryableByName, Identifiable, Associations)]
 #[table_name = "rank_aggregations"]
+#[belongs_to(Location)]
 pub struct RankAggregation {
     pub id: i32,
     pub total: i64,
@@ -177,10 +207,17 @@ pub struct RankAggregation {
     pub update_on: NaiveDateTime,
 }
 
-#[derive(Debug, Deserialize, Insertable, AsChangeset)]
+#[derive(Debug, Deserialize, Insertable)]
 #[table_name = "rank_aggregations"]
-pub struct RankAggregationCommand {
+pub struct RankAggregationInsert {
     pub total: i64,
     pub count: i64,
     pub location_id: i32,
+}
+
+#[derive(Debug, Deserialize, AsChangeset)]
+#[table_name = "rank_aggregations"]
+pub struct RankAggregationUpdate {
+    pub total: i64,
+    pub count: i64,
 }

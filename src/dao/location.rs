@@ -1,6 +1,6 @@
 use crate::models::{Location, LocationInsertion, LocationUpdating, LocationUploadRel, Upload, User};
 use crate::schema::*;
-use crate::serde::{Deserialize, Serialize};
+use crate::serde::Deserialize;
 use anyhow::{Context, Error};
 use diesel::{
     delete,
@@ -11,7 +11,7 @@ use diesel::{
     BelongingToDsl, Connection, ExpressionMethods, QueryDsl, RunQueryDsl, TextExpressionMethods,
 };
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct Query {
     pub name: Option<String>,
     pub latitude: f64,
@@ -20,6 +20,26 @@ pub struct Query {
     pub category: Option<i32>,
     pub limit: i64,
     pub offset: i64,
+    pub order_by: OrderBy,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderBy {
+    DistanceAsc,
+    DistanceDesc,
+    CreateOnAsc,
+    CreateOnDesc,
+    UpdateOnAsc,
+    UpdateOnDesc,
+    NameAsc,
+    NameDesc,
+}
+
+impl Default for OrderBy {
+    fn default() -> Self {
+        Self::DistanceAsc
+    }
 }
 
 pub fn query<T>(conn: &T, query: Query) -> Result<((Vec<Location>, Vec<f64>), i64), Error>
@@ -56,7 +76,16 @@ where
         c = c.filter(locations::category.eq(category));
         q = q.filter(locations::category.eq(category));
     }
-    q = q.order_by(sql::<Double>("distance"));
+    match query.order_by {
+        OrderBy::DistanceAsc => q = q.order_by(sql::<Double>("distance")),
+        OrderBy::CreateOnAsc => q = q.order_by(locations::create_on),
+        OrderBy::UpdateOnAsc => q = q.order_by(locations::update_on),
+        OrderBy::NameAsc => q = q.order_by(locations::name),
+        OrderBy::DistanceDesc => q = q.order_by(sql::<Double>("distance DESC")),
+        OrderBy::CreateOnDesc => q = q.order_by(locations::create_on.desc()),
+        OrderBy::UpdateOnDesc => q = q.order_by(locations::update_on.desc()),
+        OrderBy::NameDesc => q = q.order_by(locations::name.desc()),
+    }
     let total = c.count().get_result(conn).context("failed to find locations")?;
     let rows: Vec<(Location, f64)> = q.load(conn).context("failed to find locations")?;
     let (locs, dists) = rows.into_iter().unzip();

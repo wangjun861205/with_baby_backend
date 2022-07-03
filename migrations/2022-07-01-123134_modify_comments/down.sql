@@ -1,0 +1,1 @@
+ALTER TABLE comments DROP CONSTRAINT uni_user_location;

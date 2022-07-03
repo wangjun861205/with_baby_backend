@@ -1,0 +1,1 @@
+ALTER TABLE rank_aggregations DROP CONSTRAINT uni_location_id;
