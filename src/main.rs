@@ -2,6 +2,7 @@ mod dao;
 mod domain;
 mod error;
 mod generator;
+mod geo;
 mod handlers;
 mod hasher;
 mod models;
