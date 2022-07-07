@@ -61,6 +61,7 @@ table! {
         discoverer -> Int4,
         create_on -> Timestamp,
         update_on -> Timestamp,
+        geo_index -> Bpchar,
     }
 }
 

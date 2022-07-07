@@ -64,6 +64,7 @@ pub struct LocationInsertion {
     pub category: i32,
     pub description: String,
     pub discoverer: i32,
+    pub geo_index: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Identifiable, Queryable, QueryableByName, AsChangeset, Clone)]
@@ -78,6 +79,7 @@ pub struct Location {
     pub discoverer: i32,
     pub create_on: NaiveDateTime,
     pub update_on: NaiveDateTime,
+    pub geo_index: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, AsChangeset, Clone)]
@@ -89,6 +91,7 @@ pub struct LocationUpdating {
     pub category: i32,
     pub description: String,
     pub discoverer: i32,
+    pub geo_index: String,
 }
 
 #[derive(Debug, Serialize, Queryable)]

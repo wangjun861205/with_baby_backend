@@ -1,5 +1,6 @@
 // use super::models::Location;
 use crate::error::Error;
+use crate::geo::h3;
 use crate::handlers::PgPool;
 use crate::response::ListResponse;
 use crate::serde::Deserialize;
@@ -8,6 +9,7 @@ use crate::{
     dao::{equipment, location, rank_aggregation, upload, user},
     models::{Equipment, Location, LocationInsertion, LocationUpdating, RankAggregation, RankAggregationInsert, Upload, User},
 };
+
 use actix_web::{
     web::{get, post, put, Data, Json, Path, Query},
     Scope,
@@ -89,6 +91,7 @@ pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<Crea
                 category: body.category,
                 description: body.description,
                 discoverer: uid.0,
+                geo_index: h3::index(body.latitude, body.longitude, 13),
             },
         )?;
         for img_id in body.images {
@@ -142,6 +145,7 @@ pub async fn update(pool: Data<PgPool>, uid: UID, id: Path<(i32,)>, Json(body): 
                 category: body.category,
                 description: body.description,
                 discoverer: user.id,
+                geo_index: loc.geo_index,
             },
         )?;
         location::clear_images(&conn, id.0)?;
