@@ -91,7 +91,7 @@ pub async fn create_location(pool: Data<PgPool>, uid: UID, Json(body): Json<Crea
                 category: body.category,
                 description: body.description,
                 discoverer: uid.0,
-                geo_index: h3::index(body.latitude, body.longitude, 13),
+                geo_index: h3::index(body.latitude, body.longitude, 13).to_string(),
             },
         )?;
         for img_id in body.images {
